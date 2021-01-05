@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Dec 18 14:10:38 2021
+Created on Mon Dec 18 14:10:38 2020
 
 @author: jackr
 """
@@ -39,6 +39,7 @@ def create_Station_ID_List(siteName,latName,lonName,gaccName,stateName,grupName)
     stationDataFrame = pd.DataFrame({"Site": [siteName],"Latitude":[latName],"Longitude":[lonName],"GACC":[gaccName],
                                      "State":[stateName],"Group":[grupName]})
     stationDataFrame.to_pickle("stationID.pkl")
+    stationDataFrame.to_csv("stationID.csv",index=False)
     
 def update_Station_ID_List():
     # Get site list
@@ -117,19 +118,25 @@ def update_Station_ID_List():
         
         else:
             create_Station_ID_List(stationName1,latName,lonName,gaccName,stateName,grupName1)
+            tempUrlList.append("https://www.wfas.net/nfmd/public/download_site_data.php?site="+stationName+"&gacc="+
+                                   gaccName+"&state="+stateName+"&grup="+grupName)
             
         Outtercount+=1
     
     tempCounter = 0
-    for j in tempUrlList:
-        stationDataFrame = pd.read_pickle("stationID.pkl")
-        stationDataFrame.loc[len(stationDataFrame.index)] = [tempSite[tempCounter],tempLat[tempCounter],tempLon[tempCounter],
-                                                             tempGacc[tempCounter],tempState[tempCounter],tempGrup[tempCounter]]
-        urlList.append(j)
-        stationDataFrame.to_pickle("stationID.pkl")
-        tempCounter+=1
+    if os.path.exists("stationID.pkl"):
+        for j in tempUrlList:
+            stationDataFrame = pd.read_pickle("stationID.pkl")
+            stationDataFrame.loc[len(stationDataFrame.index)] = [tempSite[tempCounter],tempLat[tempCounter],tempLon[tempCounter],
+                                                                 tempGacc[tempCounter],tempState[tempCounter],tempGrup[tempCounter]]
+            urlList.append(j)
+            stationDataFrame.to_pickle("stationID.pkl")
+            stationDataFrame.to_csv("stationID.csv",index=False)
+            tempCounter+=1
         
-            
+    print(tempCounter)
+    print(len(tempUrlList))
+    print(tempUrlList)
     if os.path.exists(file):
         os.remove(file)
     else:

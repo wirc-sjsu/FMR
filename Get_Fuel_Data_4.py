@@ -61,7 +61,7 @@ def update_Station_ID_List():
     tempGacc = []
     tempState = []
     tempGrup = []
-    Outtercount = 0
+    placeInList = 0
     
     for i in range(len(head)-2):
         stringStart = str(siteData[str(i)])
@@ -107,13 +107,13 @@ def update_Station_ID_List():
             foundSite = False
             
             # Checks to see if a new station has been added when compared to list currently in database
-            for i in range(len(stationDataFrame.Site)):
-                if stationDataFrame.Site[i] == stationName1:
-                    if stationDataFrame.Group[i] == grupName1:
-                        foundSite = True
-                        urlList.append("https://www.wfas.net/nfmd/public/download_site_data.php?site="+stationName+"&gacc="+
-                                       gaccName+"&state="+stateName+"&grup="+grupName)
-            
+            #for i in range(len(stationDataFrame.Site)):
+            if stationDataFrame.Site[placeInList] == stationName1:
+                if stationDataFrame.Group[placeInList] == grupName1:
+                    foundSite = True
+                    urlList.append("https://www.wfas.net/nfmd/public/download_site_data.php?site="+stationName+"&gacc="+
+                                   gaccName+"&state="+stateName+"&grup="+grupName)
+            placeInList += 1
             # If a new site has been found, put its data download link in a temporary list 
             if foundSite == False:
                 tempUrlList.append("https://www.wfas.net/nfmd/public/download_site_data.php?site="+stationName+"&gacc="+
@@ -128,8 +128,6 @@ def update_Station_ID_List():
             create_Station_ID_List(stationName1,latName,lonName,gaccName,stateName,grupName1)
             urlList.append("https://www.wfas.net/nfmd/public/download_site_data.php?site="+stationName+"&gacc="+
                                    gaccName+"&state="+stateName+"&grup="+grupName)
-            
-        Outtercount+=1
     
     tempCounter = 0
     if os.path.exists("stationID.pkl"):
@@ -208,15 +206,19 @@ def update_Data_File(urlList):
                 
             
 
-stationList = update_Station_ID_List()
-update_Data_File(stationList)
+#stationList = update_Station_ID_List()
+#update_Data_File(stationList)
+
+
 
 #testFile = wget.download(stationList[0])
 #head = ["datetime","fuel","percent"]
 #data1 = pd.read_csv(testFile,sep="	",names=head,skiprows=1, usecols=[4,5,6])
 #print(data1.datetime[0])
 
-
-
+testDataFrame = pd.read_pickle("2000.pkl")
+for i in stationList:
+    print(i)
+    print(" ")
 
 

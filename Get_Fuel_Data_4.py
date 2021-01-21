@@ -35,8 +35,8 @@ def get_Index(stringData,startOfVariable,seperator):
         count += 1
     return count
 
-def create_Station_ID_List(siteName,latName,lonName,gaccName,stateName,grupName):
-    stationDataFrame = pd.DataFrame({"Site": [siteName],"Latitude":[latName],"Longitude":[lonName],"GACC":[gaccName],
+def create_Station_ID_List(siteNumber,siteName,latName,lonName,gaccName,stateName,grupName):
+    stationDataFrame = pd.DataFrame({"Site_Number": [siteNumber],"Site": [siteName],"Latitude":[latName],"Longitude":[lonName],"GACC":[gaccName],
                                      "State":[stateName],"Group":[grupName]})
     stationDataFrame.to_pickle("stationID.pkl")
     stationDataFrame.to_csv("stationID.csv",index=False)
@@ -56,13 +56,15 @@ def update_Station_ID_List():
     urlList = []
     tempUrlList = []
     tempSite = []
+    finalSite = []
     tempLat = []
     tempLon = []
     tempGacc = []
     tempState = []
     tempGrup = []
-    placeInList = 0
+    finalGrup = []
     
+    #print("About to get all the links")
     for i in range(len(head)-2):
         stringStart = str(siteData[str(i)])
         #print(stringStart)
@@ -103,122 +105,132 @@ def update_Station_ID_List():
         
         # Prepare data for stationID PKL file and get put station data download links in a list
         if os.path.exists("stationID.pkl"):
-            stationDataFrame = pd.read_pickle("stationID.pkl")
-            foundSite = False
-            
-            # Checks to see if a new station has been added when compared to list currently in database
-            #for i in range(len(stationDataFrame.Site)):
-            if stationDataFrame.Site[placeInList] == stationName1:
-                if stationDataFrame.Group[placeInList] == grupName1:
-                    foundSite = True
-                    urlList.append("https://www.wfas.net/nfmd/public/download_site_data.php?site="+stationName+"&gacc="+
+            tempUrlList.append("https://www.wfas.net/nfmd/public/download_site_data.php?site="+stationName+"&gacc="+
                                    gaccName+"&state="+stateName+"&grup="+grupName)
-            placeInList += 1
-            # If a new site has been found, put its data download link in a temporary list 
-            if foundSite == False:
-                tempUrlList.append("https://www.wfas.net/nfmd/public/download_site_data.php?site="+stationName+"&gacc="+
-                                   gaccName+"&state="+stateName+"&grup="+grupName)
-                tempSite.append(stationName1)
-                tempLat.append(latName)
-                tempLon.append(lonName)
-                tempGacc.append(gaccName)
-                tempState.append(stateName)
-                tempGrup.append(grupName1)
+            tempSite.append(stationName1)
+            tempLat.append(latName)
+            tempLon.append(lonName)
+            tempGacc.append(gaccName)
+            tempState.append(stateName)
+            tempGrup.append(grupName1)
         else:
-            create_Station_ID_List(stationName1,latName,lonName,gaccName,stateName,grupName1)
+            create_Station_ID_List(0,stationName1,latName,lonName,gaccName,stateName,grupName1)
             urlList.append("https://www.wfas.net/nfmd/public/download_site_data.php?site="+stationName+"&gacc="+
                                    gaccName+"&state="+stateName+"&grup="+grupName)
+
     
-    tempCounter = 0
+    foundList = [False] * len(tempUrlList)
     if os.path.exists("stationID.pkl"):
-        for j in range(len(tempUrlList)):
-            stationDataFrame = pd.read_pickle("stationID.pkl")
-            stationDataFrame.loc[len(stationDataFrame.index)] = [tempSite[tempCounter],tempLat[tempCounter],tempLon[tempCounter],
-                                                                 tempGacc[tempCounter],tempState[tempCounter],tempGrup[tempCounter]]
-            urlList.append(tempUrlList[j])
-            stationDataFrame.to_pickle("stationID.pkl")
-            stationDataFrame.to_csv("stationID.csv",index=False)
-            tempCounter+=1
+        stationDataFrame = pd.read_pickle("stationID.pkl")
+        for k in range(len(stationDataFrame.Site)):
+            for l in range(len(tempUrlList)):
+                if stationDataFrame.Site[k] == tempSite[l]:
+                    if stationDataFrame.Group[k] == tempGrup[l]:
+                        urlList.append(tempUrlList[l])
+                        foundList[l] = True
+                        finalSite.append(tempSite[l])
+                        finalGrup.append(tempGrup[l])
+        
+        numberOfStations = len(stationDataFrame.Site)
+        for m in range(len(foundList)):
+            if foundList[m] == False:
+                stationDataFrame.loc[len(stationDataFrame.index)] = [numberOfStations,tempSite[m],tempLat[m],tempLon[m],
+                                                                 tempGacc[m],tempState[m],tempGrup[m]]
+                urlList.append(tempUrlList[m])
+                finalSite.append(tempSite[m])
+                finalGrup.append(tempSite[m])
+                stationDataFrame.to_pickle("stationID.pkl")
+                stationDataFrame.to_csv("stationID.csv",index=False)
+                numberOfStations += 1
         
     if os.path.exists(file):
         os.remove(file)
     else:
         print("The file does not exist")
     
-    print("Done")
     return urlList
 
 
 def update_Data_File(urlList):
-    
-    # Loop to download data and get the needed variables
-    yearStart=2000
-    yearEnd = 2020
-    currentSite = 0
+    if os.path.exists("stationID.pkl"):
+        stationIdDataFrame = pd.read_pickle("stationID.pkl")
+        # Loop to download data and get the needed variables
+        yearStart=2000
+        yearEnd = 2020
 
-    for i in urlList:
-        # downloads site "i" data file
-        file = wget.download(i)
-        head = ["datetime","fuel","percent"]
-        data1 = pd.read_csv(file,sep="	",names=head,skiprows=1, usecols=[4,5,6])
-        count = 0
-        for j in data1.datetime:
-            stationYear = j[0:4]
+        for i in urlList:
+            # downloads site "i" data file
+            file = wget.download(i)
+            
+            stringStart = str(i)
+            stationEnd = get_Index(stringStart,61,'&')
+            gaccEnd = get_Index(stringStart,stationEnd+6,'&')
+            stateEnd = get_Index(stringStart,gaccEnd+7,'&')
+            if stateEnd+6 == "=":
+                currentGroup = stringStart[stateEnd+7::].replace("%20"," ")
+            elif stateEnd+7 == "=":
+                currentGroup = stringStart[stateEnd+8::].replace("%20"," ")
+            else:
+                currentGroup = stringStart[stateEnd+6::].replace("%20"," ")
+            currentSite = str(i)[61:stationEnd].replace("%20"," ")
+            print("list:",currentSite)
+            print("groups:",currentGroup)
+            
+            for j in range(len(stationIdDataFrame.Site)):
+                if currentSite == stationIdDataFrame.Site[j]:
+                    if currentGroup == stationIdDataFrame.Group[j]:
+                        currentSite = stationIdDataFrame.Site_Number[j]
 
-            # Check if the given date's year is in the range provided 
-            if int(stationYear) >= yearStart and int(stationYear) <= yearEnd:
             
-                # lines 126-133 deal with if a plant is a variation
-                if "," in data1.fuel[count]:
-                    tempVariation = data1.fuel[count].split()
-                    fuel = tempVariation[0][0:len(tempVariation[0])-1]
-                    variation = tempVariation[1]
-                else:
-                    fuel = data1.fuel[count]
-                    variation = None
+            head = ["datetime","fuel","percent"]
+            data1 = pd.read_csv(file,sep="	",names=head,skiprows=1, usecols=[4,5,6])
+            count = 0
+            for j in data1.datetime:
+                stationYear = j[0:4]
+
+        # Check if the given date's year is in the range provided 
+                if int(stationYear) >= yearStart and int(stationYear) <= yearEnd:
+                    
+            # lines 126-133 deal with if a plant is a variation
+                    if "," in data1.fuel[count]:
+                        tempVariation = data1.fuel[count].split()
+                        fuel = tempVariation[0][0:len(tempVariation[0])-1]
+                        variation = tempVariation[1]
+                    else:
+                        fuel = data1.fuel[count]
+                        variation = None
             
-                # checks to see if year file is already made, otherwise, adds datetime, fueltype, fuel variation, and fuel data 
-                # to csv file
-                if os.path.exists(stationYear+".pkl"):
-                    stationDataFrame = pd.read_pickle(stationYear+".pkl")
-                    foundData = False
-                    for k in range(len(stationDataFrame.dateTime)):
-                        if stationDataFrame.stationID[k] == currentSite:
-                            if stationDataFrame.dateTime[k] == j:
-                                if stationDataFrame.fuelType[k] == fuel:
-                                    if stationDataFrame.fuelVariation[k] == variation:
-                                        foundData = True
+                    # checks to see if year file is already made, otherwise, adds datetime, fueltype, fuel variation, and fuel data 
+                    # to csv file
+                    if os.path.exists(stationYear+".pkl"):
+                        yearDataFrame = pd.read_pickle(stationYear+".pkl")
+                        foundData = False
+                        for k in range(len(yearDataFrame.dateTime)):
+                            if yearDataFrame.stationID[k] == currentSite:
+                                if yearDataFrame.dateTime[k] == j:
+                                    if yearDataFrame.fuelType[k] == fuel:
+                                        if yearDataFrame.fuelVariation[k] == variation:
+                                            foundData = True
                                 
-                    if foundData == False:
-                        stationDataFrame.loc[len(stationDataFrame.index)] = [currentSite,j,fuel,variation,data1.percent[count]]
+                        if foundData == False:
+                            yearDataFrame.loc[len(yearDataFrame.index)] = [currentSite,j,fuel,variation,data1.percent[count]]
 
-                else:
-                    stationDataFrame = pd.DataFrame({"stationID": [currentSite],"dateTime":[data1.datetime[count]],"fuelType":[fuel],"fuelVariation":[variation],
-                                     "fuelData":[data1.percent[count]]})
+                    else:
+                        yearDataFrame = pd.DataFrame({"stationID": [currentSite],"dateTime":[data1.datetime[count]],"fuelType":[fuel],"fuelVariation":[variation],
+                                                      "fuelData":[data1.percent[count]]})
                 
-                stationDataFrame.to_pickle(stationYear+".pkl")
-                #stationDataFrame.to_csv(stationYear+".csv",index=False)
-            count+=1
-        print(currentSite)
-        currentSite += 1
-        if os.path.exists(file):
-            os.remove(file)
+                    yearDataFrame.to_pickle(stationYear+".pkl")
+                    #yearDataFrame.to_csv(stationYear+".csv",index=False)
+                count+=1
+                #print(currentSite)
+            if os.path.exists(file):
+                os.remove(file)
                 
             
 
-#stationList = update_Station_ID_List()
-#update_Data_File(stationList)
+stationList = update_Station_ID_List()
+update_Data_File(stationList)
 
 
-
-#testFile = wget.download(stationList[0])
-#head = ["datetime","fuel","percent"]
-#data1 = pd.read_csv(testFile,sep="	",names=head,skiprows=1, usecols=[4,5,6])
-#print(data1.datetime[0])
-
-testDataFrame = pd.read_pickle("2000.pkl")
-for i in stationList:
-    print(i)
-    print(" ")
 
 

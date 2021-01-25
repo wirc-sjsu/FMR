@@ -12,9 +12,11 @@ import os
 import numpy as np
 import csv
 
-#stationDataFrame = pd.read_pickle("stationID.pkl")
+
 ## Funtions ##
 
+# Finds endpoint of a string given a seperator
+#
 # @ Param stringData - general station data in string format
 # @ Param startOfVariable - index of where a particular variable starts in stringData
 # @ Param seperator - value you want to loop until you find your desired end point
@@ -25,8 +27,8 @@ import csv
 # someString = "KSJC 10-29-20"
 # variableStart = 5
 # seperator = '-'
-# month = get_Index(someString,variableStart,seperator)
-# month would be equal to 7
+# monthEnd = get_Index(someString,variableStart,seperator)
+# monthEnd would be equal to 7
 #
 def get_Index(stringData,startOfVariable,seperator):
     count = startOfVariable
@@ -35,39 +37,53 @@ def get_Index(stringData,startOfVariable,seperator):
         count += 1
     return count
 
+
+# Creates a PKL file with NFMD stations
+#
+# @ Param siteNumber - site number corresponding to a station
+# @ Param siteName - name of a station
+# @ Param latName - latitude of a station
+# @ Param lonName - longitude of a station
+# @ Param gaccName - geographical area coordination center of a station
+# @ Param stateName - state of a station
+# @ Param grupName - group managing a station
+#
 def create_Station_ID_List(siteNumber,siteName,latName,lonName,gaccName,stateName,grupName):
     stationDataFrame = pd.DataFrame({"Site_Number": [siteNumber],"Site": [siteName],"Latitude":[latName],"Longitude":[lonName],"GACC":[gaccName],
                                      "State":[stateName],"Group":[grupName]})
     stationDataFrame.to_pickle("stationID.pkl")
-    stationDataFrame.to_csv("stationID.csv",index=False)
+
+# Updates the Station ID list
+#
+# @ Param state - state that you want fuel mositure from
+#
+def update_Station_ID_List(state):
     
-def update_Station_ID_List():
-    # Get site list
+    # Get site list from NFMD for a specific state
     pd.set_option('display.max_colwidth', -1)
-    url = "https://www.wfas.net/nfmd/ajax/states_map_site_xml.php?state=CA"
+    url = "https://www.wfas.net/nfmd/ajax/states_map_site_xml.php?state="+state
     file = wget.download(url)
 
-    tempData = pd.read_csv(file,sep="/>",engine='python')
-    numberOfStations = int(str(tempData.shape)[4:7])
+    # Find the total number of stations 
+    siteData = pd.read_csv(file,sep="/>",engine='python')
+    numberOfStations = int(str(siteData.shape)[4:7])
     head = [str(i) for i in np.arange(0,numberOfStations+1,1)]
-
-    siteData = pd.read_csv(file,names=head,sep="/>",engine='python')
     
+    # Lists to be used later in the function
     urlList = []
     tempUrlList = []
     tempSite = []
-    finalSite = []
     tempLat = []
     tempLon = []
     tempGacc = []
     tempState = []
     tempGrup = []
-    finalGrup = []
     
-    #print("About to get all the links")
+    # From line 67 - 118, get the needed variables for each site
+    # site example: <marker site="12 Rd @ 54 Rd" gacc="NOCC" state="CA" grup="Tahoe NF" lat="39.570555555556" lng="-120.49277777778" active="0" currency="3"/>
     for i in range(len(head)-2):
         stringStart = str(siteData[str(i)])
-        #print(stringStart)
+
         if i == 0:
             stationEnd=get_Index(stringStart,28,'"')
             
@@ -78,8 +94,9 @@ def update_Station_ID_List():
         stateEnd=get_Index(stringStart,gaccEnd+9,'"')
         grupEnd=get_Index(stringStart,stateEnd+8,'"')
         latEnd=get_Index(stringStart,grupEnd+7,'"')
-        #lonEnd=get_Index(stringStart,latEnd+7,'"')
 
+        # Download link has "%20" instead of spaces, but we still need spaces for PKL file
+        # Example site download link: https://www.wfas.net/nfmd/public/download_site_data.php?site=12%20Rd%20@%2054%20Rd&gacc=NOCC&state=CA&grup=Tahoe%20NF
         if i == 0:    
             stationName = stringStart[28:stationEnd].replace(" ","%20")
             stationName1 = stringStart[28:stationEnd]
@@ -118,7 +135,7 @@ def update_Station_ID_List():
             urlList.append("https://www.wfas.net/nfmd/public/download_site_data.php?site="+stationName+"&gacc="+
                                    gaccName+"&state="+stateName+"&grup="+grupName)
 
-    
+    # Sorts download links in order of sites in stationID.pkl file
     foundList = [False] * len(tempUrlList)
     if os.path.exists("stationID.pkl"):
         stationDataFrame = pd.read_pickle("stationID.pkl")
@@ -128,21 +145,19 @@ def update_Station_ID_List():
                     if stationDataFrame.Group[k] == tempGrup[l]:
                         urlList.append(tempUrlList[l])
                         foundList[l] = True
-                        finalSite.append(tempSite[l])
-                        finalGrup.append(tempGrup[l])
         
+        # If a new site is added to the NFMD, append it to the end of the stationID.pkl file
         numberOfStations = len(stationDataFrame.Site)
         for m in range(len(foundList)):
             if foundList[m] == False:
                 stationDataFrame.loc[len(stationDataFrame.index)] = [numberOfStations,tempSite[m],tempLat[m],tempLon[m],
                                                                  tempGacc[m],tempState[m],tempGrup[m]]
                 urlList.append(tempUrlList[m])
-                finalSite.append(tempSite[m])
-                finalGrup.append(tempSite[m])
                 stationDataFrame.to_pickle("stationID.pkl")
                 stationDataFrame.to_csv("stationID.csv",index=False)
                 numberOfStations += 1
-        
+    
+    # Removes site list file from local directory
     if os.path.exists(file):
         os.remove(file)
     else:
@@ -154,14 +169,19 @@ def update_Station_ID_List():
 def update_Data_File(urlList):
     if os.path.exists("stationID.pkl"):
         stationIdDataFrame = pd.read_pickle("stationID.pkl")
-        # Loop to download data and get the needed variables
+        
+        # Years you would like data for. Each year is made into a seperate PKL file
+        # For example: 2000.pkl, 2001.pkl, etc.
         yearStart=2000
         yearEnd = 2020
 
+         # Loop to download data and get the needed variables
         for i in urlList:
             # downloads site "i" data file
             file = wget.download(i)
             
+            # Read downloaded file for identifying the station
+            # For example: https://www.wfas.net/nfmd/public/download_site_data.php?site=12%20Rd%20@%2054%20Rd&gacc=NOCC&state=CA&grup=Tahoe%20NF
             stringStart = str(i)
             stationEnd = get_Index(stringStart,61,'&')
             gaccEnd = get_Index(stringStart,stationEnd+6,'&')
@@ -176,6 +196,7 @@ def update_Data_File(urlList):
             print("list:",currentSite)
             print("groups:",currentGroup)
             
+            # Get site number corresponding to the station in the stationID.pkl file
             for j in range(len(stationIdDataFrame.Site)):
                 if currentSite == stationIdDataFrame.Site[j]:
                     if currentGroup == stationIdDataFrame.Group[j]:
@@ -200,8 +221,8 @@ def update_Data_File(urlList):
                         fuel = data1.fuel[count]
                         variation = None
             
-                    # checks to see if year file is already made, otherwise, adds datetime, fueltype, fuel variation, and fuel data 
-                    # to csv file
+                    # checks to see if year file is already made, otherwise, it creates a PKL file with
+                    # datetime, fueltype, fuel variation, and fuel data
                     if os.path.exists(stationYear+".pkl"):
                         yearDataFrame = pd.read_pickle(stationYear+".pkl")
                         foundData = False
@@ -220,14 +241,12 @@ def update_Data_File(urlList):
                                                       "fuelData":[data1.percent[count]]})
                 
                     yearDataFrame.to_pickle(stationYear+".pkl")
-                    #yearDataFrame.to_csv(stationYear+".csv",index=False)
                 count+=1
-                #print(currentSite)
             if os.path.exists(file):
                 os.remove(file)
                 
             
-
+state = "CA"
 stationList = update_Station_ID_List()
 update_Data_File(stationList)
 

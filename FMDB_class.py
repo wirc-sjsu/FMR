@@ -277,20 +277,16 @@ class FMDB(object):
         datesList = []
         stationName = []
         
-        print(endYear)
         if osp.exists("FMDB/stationID.pkl"):
             while startYear <= endYear:
                 if os.path.exists("FMDB/"+str(startYear)+".pkl"):
-                    #print(11)
                     stationDataFrame = pd.read_pickle("FMDB/stationID.pkl")
                     yearDataFrame = pd.read_pickle("FMDB/"+str(startYear)+".pkl")
                     if stationID == None:
                         stationID = range(len(stationDataFrame.Site))
                     for i in stationID:
-                        #print(i)
                         for j in range(len(yearDataFrame.stationID)):
                             if yearDataFrame.stationID[j] == i:
-                                #print(12)
                                 for k in range(len(stationDataFrame.Site_Number)):
                                     if i == stationDataFrame.Site_Number[k]:
                                         stationName.append(stationDataFrame.Site[k])
@@ -310,17 +306,9 @@ class FMDB(object):
                                         fuelTypeList.append(yearDataFrame.fuelType[j])
                                         fuelVarList.append(yearDataFrame.fuelVariation[j])
                                         datesList.append(yearDataFrame.dateTime[j])
-                    #print(startYear)
                     startYear+=1
-                    #print(startYear)
                 else:
                     print(str(startYear)+".pkl does not exist")
-                
-            print("Here")
-            print(stationName[0])
-            print(datesList[0])
-            print(fuelDataList[0])
-            print(fuelVarList[0])
             count = 1
             dataFile = "data ("+str(count)+")"
             if osp.exists('FMDB/data.csv'):
@@ -330,8 +318,6 @@ class FMDB(object):
                 print(dataFile)
             else:
                 dataFile = "data"
-            
-            print('here2')
             fuelDataFrame = pd.DataFrame({"Site": [stationName[0]],"dateTime":[datesList[0]],"fuelType":[fuelTypeList[0]],"fuelVariation":[fuelVarList[0]],"fuelData":[fuelDataList[0]]})
             for i in range(1,len(fuelDataList)):
                 fuelDataFrame.loc[len(fuelDataFrame.index)] = [stationName[i],datesList[i],fuelTypeList[i],fuelVarList[i],fuelDataList[i]]

@@ -4,6 +4,7 @@ Created on Wed Feb  3 10:11:53 2021
 
 @author: jackr
 """
+import datetime
 import numpy as np
 import os.path as osp
 import os
@@ -23,18 +24,16 @@ class FMDB(object):
     #
     def __init__(self, folder_path):
         self.folder_path = folder_path
-        if self.exists_here():
-            self.update_Station_ID_List()
-            self.update_Data_File()
+        self.exists_here()
     
 
     # Checks if directory exists. If not, create it
     #     
     def exists_here(self):
-        if osp.exists(self.folder_path+"\FMDB"):
-            return True
-        os.makedirs("FMDB")
-        return True
+        if osp.exists(self.folder_path+"/FMDB"):
+            print("FMDB Folder Exists")
+        else:
+            os.makedirs("FMDB")
     
     
     # Finds endpoint of a string given a seperator
@@ -73,23 +72,26 @@ class FMDB(object):
     def create_Station_ID_List(self,siteNumber,siteName,latName,lonName,gaccName,stateName,grupName):
         stationDataFrame = pd.DataFrame({"Site_Number": [siteNumber],"Site": [siteName],"Latitude":[latName],"Longitude":[lonName],"GACC":[gaccName],
                                          "State":[stateName],"Group":[grupName]})
-        stationDataFrame.to_pickle("stationID.pkl")
+        stationDataFrame.to_pickle("FMDB/stationID.pkl")
     
     # Updates the Station ID list
     #
     # @ Param state - state that you want fuel mositure from
     #
-    def update_Station_ID_List(self,state):
+    def update_Station_ID_List(self,state="CA"):
     
         # Get site list from NFMD for a specific state
         pd.set_option('display.max_colwidth', -1)
         url = "https://www.wfas.net/nfmd/ajax/states_map_site_xml.php?state="+state
+        #print(url)
         file = wget.download(url)
 
         # Find the total number of stations 
         siteData = pd.read_csv(file,sep="/>",engine='python')
         numberOfStations = int(str(siteData.shape)[4:7])
+        #print(numberOfStations)
         head = [str(i) for i in np.arange(0,numberOfStations+1,1)]
+        #print(head)
     
         # Lists to be used later in the function
         urlList = []
@@ -104,13 +106,14 @@ class FMDB(object):
         # From line 67 - 118, get the needed variables for each site
         # site example: <marker site="12 Rd @ 54 Rd" gacc="NOCC" state="CA" grup="Tahoe NF" lat="39.570555555556" lng="-120.49277777778" active="0" currency="3"/>
         for i in range(len(head)-2):
-            stringStart = str(siteData[str(i)])
+            #print(str(siteData.columns[0]))
+            stringStart = str(siteData.columns[i])
 
             if i == 0:
-                stationEnd=self.get_Index(stringStart,28,'"')
+                stationEnd=self.get_Index(stringStart,23,'"')
             
             else:
-                stationEnd=self.get_Index(stringStart,19,'"')
+                stationEnd=self.get_Index(stringStart,14,'"')
       
             gaccEnd=self.get_Index(stringStart,stationEnd+8,'"')
             stateEnd=self.get_Index(stringStart,gaccEnd+9,'"')
@@ -120,11 +123,11 @@ class FMDB(object):
             # Download link has "%20" instead of spaces, but we still need spaces for PKL file
             # Example site download link: https://www.wfas.net/nfmd/public/download_site_data.php?site=12%20Rd%20@%2054%20Rd&gacc=NOCC&state=CA&grup=Tahoe%20NF
             if i == 0:    
-                stationName = stringStart[28:stationEnd].replace(" ","%20")
-                stationName1 = stringStart[28:stationEnd]
+                stationName = stringStart[23:stationEnd].replace(" ","%20")
+                stationName1 = stringStart[23:stationEnd]
             else:
-                stationName = stringStart[19:stationEnd].replace(" ","%20")
-                stationName1 = stringStart[19:stationEnd]
+                stationName = stringStart[14:stationEnd].replace(" ","%20")
+                stationName1 = stringStart[14:stationEnd]
         
             gaccName = stringStart[stationEnd+8:gaccEnd]
             stateName = stringStart[gaccEnd+9:stateEnd]
@@ -143,7 +146,7 @@ class FMDB(object):
         
         
             # Prepare data for stationID PKL file and get put station data download links in a list
-            if os.path.exists("stationID.pkl"):
+            if os.path.exists("FMDB/stationID.pkl"):
                 tempUrlList.append("https://www.wfas.net/nfmd/public/download_site_data.php?site="+stationName+"&gacc="+
                                    gaccName+"&state="+stateName+"&grup="+grupName)
                 tempSite.append(stationName1)
@@ -159,8 +162,8 @@ class FMDB(object):
 
         # Sorts download links in order of sites in stationID.pkl file
         foundList = [False] * len(tempUrlList)
-        if os.path.exists("stationID.pkl"):
-            stationDataFrame = pd.read_pickle("stationID.pkl")
+        if os.path.exists("FMDB/stationID.pkl"):
+            stationDataFrame = pd.read_pickle("FMDB/stationID.pkl")
             for k in range(len(stationDataFrame.Site)):
                 for l in range(len(tempUrlList)):
                     if stationDataFrame.Site[k] == tempSite[l]:
@@ -175,8 +178,8 @@ class FMDB(object):
                     stationDataFrame.loc[len(stationDataFrame.index)] = [numberOfStations,tempSite[m],tempLat[m],tempLon[m],
                                                                      tempGacc[m],tempState[m],tempGrup[m]]
                     urlList.append(tempUrlList[m])
-                    stationDataFrame.to_pickle("stationID.pkl")
-                    stationDataFrame.to_csv("stationID.csv",index=False)
+                    stationDataFrame.to_pickle("FMDB/stationID.pkl")
+                    stationDataFrame.to_csv("FMDB/stationID.csv",index=False)
                     numberOfStations += 1
     
             # Removes site list file from local directory
@@ -188,13 +191,13 @@ class FMDB(object):
         return urlList
     
     def update_Data_File(self,urlList):
-        if os.path.exists("stationID.pkl"):
-            stationIdDataFrame = pd.read_pickle("stationID.pkl")
+        if os.path.exists("FMDB/stationID.pkl"):
+            stationIdDataFrame = pd.read_pickle("FMDB/stationID.pkl")
         
             # Years you would like data for. Each year is made into a seperate PKL file
             # For example: 2000.pkl, 2001.pkl, etc.
-            yearStart=2000
-            yearEnd = 2020
+            yearStart=int(datetime.datetime.now().year)-10
+            yearEnd = int(datetime.datetime.now().year)
 
             # Loop to download data and get the needed variables
             for i in urlList:
@@ -204,6 +207,7 @@ class FMDB(object):
                 # Read downloaded file for identifying the station
                 # For example: https://www.wfas.net/nfmd/public/download_site_data.php?site=12%20Rd%20@%2054%20Rd&gacc=NOCC&state=CA&grup=Tahoe%20NF
                 stringStart = str(i)
+                
                 stationEnd = self.get_Index(stringStart,61,'&')
                 gaccEnd = self.get_Index(stringStart,stationEnd+6,'&')
                 stateEnd = self.get_Index(stringStart,gaccEnd+7,'&')
@@ -231,7 +235,7 @@ class FMDB(object):
                     # Check if the given date's year is in the range provided 
                     if int(stationYear) >= yearStart and int(stationYear) <= yearEnd:
                     
-                        # lines 126-133 deal with if a plant is a variation
+                        # Lines 126-133 deal with if a plant is a variation
                         if "," in data1.fuel[count]:
                             tempVariation = data1.fuel[count].split()
                             fuel = tempVariation[0][0:len(tempVariation[0])-1]
@@ -240,11 +244,12 @@ class FMDB(object):
                             fuel = data1.fuel[count]
                             variation = None
             
-                        # checks to see if year file is already made, otherwise, it creates a PKL file with
+                        # Checks to see if year file is already made, otherwise, it creates a PKL file with
                         # datetime, fueltype, fuel variation, and fuel data
-                        if os.path.exists(stationYear+".pkl"):
-                            yearDataFrame = pd.read_pickle(stationYear+".pkl")
+                        if os.path.exists("FMDB/"+stationYear+".pkl"):
+                            yearDataFrame = pd.read_pickle("FMDB/"+stationYear+".pkl")
                             foundData = False
+                            # This loops makes sure that no repeated data is added to the database
                             for k in range(len(yearDataFrame.dateTime)):
                                 if yearDataFrame.stationID[k] == currentSite:
                                     if yearDataFrame.dateTime[k] == j:
@@ -259,12 +264,97 @@ class FMDB(object):
                             yearDataFrame = pd.DataFrame({"stationID": [currentSite],"dateTime":[data1.datetime[count]],"fuelType":[fuel],"fuelVariation":[variation],
                                                               "fuelData":[data1.percent[count]]})
                 
-                        yearDataFrame.to_pickle(stationYear+".pkl")
+                        yearDataFrame.to_pickle("FMDB/"+stationYear+".pkl")
                     count+=1
                 if os.path.exists(file):
                     os.remove(file)
 
 
-
-
+    def get_Data(self,startYear=int(datetime.datetime.now().year),endYear=int(datetime.datetime.now().year),stationID=None,fuelType=None,fuelVariation=None,makeFile=False):
+        fuelDataList = []
+        fuelTypeList = []
+        fuelVarList = []
+        datesList = []
+        stationName = []
         
+        print(endYear)
+        if osp.exists("FMDB/stationID.pkl"):
+            while startYear <= endYear:
+                if os.path.exists("FMDB/"+str(startYear)+".pkl"):
+                    #print(11)
+                    stationDataFrame = pd.read_pickle("FMDB/stationID.pkl")
+                    yearDataFrame = pd.read_pickle("FMDB/"+str(startYear)+".pkl")
+                    if stationID == None:
+                        stationID = range(len(stationDataFrame.Site))
+                    for i in stationID:
+                        #print(i)
+                        for j in range(len(yearDataFrame.stationID)):
+                            if yearDataFrame.stationID[j] == i:
+                                #print(12)
+                                for k in range(len(stationDataFrame.Site_Number)):
+                                    if i == stationDataFrame.Site_Number[k]:
+                                        stationName.append(stationDataFrame.Site[k])
+                                if fuelType == None:
+                                    fuelDataList.append(yearDataFrame.fuelData[j])
+                                    fuelTypeList.append(yearDataFrame.fuelType[j])
+                                    fuelVarList.append(yearDataFrame.fuelVariation[j])
+                                    datesList.append(yearDataFrame.dateTime[j])
+                                elif yearDataFrame.fuelType[j] == fuelType:
+                                    if fuelVariation == None:
+                                        fuelDataList.append(yearDataFrame.fuelData[j])
+                                        fuelTypeList.append(yearDataFrame.fuelType[j])
+                                        fuelVarList.append(yearDataFrame.fuelVariation[j])
+                                        datesList.append(yearDataFrame.dateTime[j])
+                                    elif yearDataFrame.fuelVariation[j] == fuelVariation:
+                                        fuelDataList.append(yearDataFrame.fuelData[j])
+                                        fuelTypeList.append(yearDataFrame.fuelType[j])
+                                        fuelVarList.append(yearDataFrame.fuelVariation[j])
+                                        datesList.append(yearDataFrame.dateTime[j])
+                    #print(startYear)
+                    startYear+=1
+                    #print(startYear)
+                else:
+                    print(str(startYear)+".pkl does not exist")
+                
+            print("Here")
+            print(stationName[0])
+            print(datesList[0])
+            print(fuelDataList[0])
+            print(fuelVarList[0])
+            count = 1
+            dataFile = "data ("+str(count)+")"
+            if osp.exists('FMDB/data.csv'):
+                while osp.exists("FMDB/"+dataFile+".csv"):
+                    count+=1
+                    dataFile = "data ("+str(count)+")"
+                print(dataFile)
+            else:
+                dataFile = "data"
+            
+            print('here2')
+            fuelDataFrame = pd.DataFrame({"Site": [stationName[0]],"dateTime":[datesList[0]],"fuelType":[fuelTypeList[0]],"fuelVariation":[fuelVarList[0]],"fuelData":[fuelDataList[0]]})
+            for i in range(1,len(fuelDataList)):
+                fuelDataFrame.loc[len(fuelDataFrame.index)] = [stationName[i],datesList[i],fuelTypeList[i],fuelVarList[i],fuelDataList[i]]
+            #fuelDataFrame['dateTime'] = pd.to_datetime(fuelDataFrame['dateTime'])
+            #fuelDataFrame = fuelDataFrame.sort_values('fuelVariation')
+            if makeFile == True:
+                fuelDataFrame.to_csv('FMDB/'+dataFile+'.csv',index=False, date_format='%Y-%m-%d')
+            else:
+                return fuelDataFrame
+        else:
+            print("stationID.pkl does not exist")
+
+
+#testDB = FMDB(osp.abspath(os.getcwd()))
+#urlList = testDB.update_Station_ID_List("CA")
+#testDB.update_Data_File(urlList)
+#testDB.get_Data(startYear=2000,endYear=2021,stationID=[36],fuelType=None,fuelVariation=None,makeFile=True) 
+
+#tester = pd.read_csv("FMDB/data (5).csv")
+#print(tester.dateTime[0])
+
+
+
+
+
+     

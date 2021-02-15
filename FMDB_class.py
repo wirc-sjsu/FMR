@@ -220,10 +220,18 @@ class FMDB(object):
                 currentSite = str(i)[61:stationEnd].replace("%20"," ")
             
                 # Get site number corresponding to the station in the stationID.pkl file
+                #
+                # If update_Data_File is called without the stationID list being updated
+                # skips the current site (file)
+                siteExists = False
                 for j in range(len(stationIdDataFrame.Site)):
                     if currentSite == stationIdDataFrame.Site[j]:
                         if currentGroup == stationIdDataFrame.Group[j]:
                             currentSite = stationIdDataFrame.Site_Number[j]
+                            siteExists = True
+                if siteExists == False:
+                    print(currentSite+" not in stationID file")
+                    break
 
             
                 head = ["datetime","fuel","percent"]
@@ -315,14 +323,14 @@ class FMDB(object):
                 while osp.exists("FMDB/"+dataFile+".csv"):
                     count+=1
                     dataFile = "data ("+str(count)+")"
-                print(dataFile)
             else:
                 dataFile = "data"
             fuelDataFrame = pd.DataFrame({"Site": [stationName[0]],"dateTime":[datesList[0]],"fuelType":[fuelTypeList[0]],"fuelVariation":[fuelVarList[0]],"fuelData":[fuelDataList[0]]})
             for i in range(1,len(fuelDataList)):
                 fuelDataFrame.loc[len(fuelDataFrame.index)] = [stationName[i],datesList[i],fuelTypeList[i],fuelVarList[i],fuelDataList[i]]
-            #fuelDataFrame['dateTime'] = pd.to_datetime(fuelDataFrame['dateTime'])
-            #fuelDataFrame = fuelDataFrame.sort_values('fuelVariation')
+            fuelDataFrame['dateTime'] = pd.to_datetime(fuelDataFrame['dateTime'])
+            fuelDataFrame = fuelDataFrame.sort_values('fuelVariation')
+            fuelDataFrame = fuelDataFrame.sort_values('dateTime')
             if makeFile == True:
                 fuelDataFrame.to_csv('FMDB/'+dataFile+'.csv',index=False, date_format='%Y-%m-%d')
             else:
@@ -331,10 +339,10 @@ class FMDB(object):
             print("stationID.pkl does not exist")
 
 
-#testDB = FMDB(osp.abspath(os.getcwd()))
+testDB = FMDB(osp.abspath(os.getcwd()))
 #urlList = testDB.update_Station_ID_List("CA")
 #testDB.update_Data_File(urlList)
-#testDB.get_Data(startYear=2000,endYear=2021,stationID=[36],fuelType=None,fuelVariation=None,makeFile=True)
+testDB.get_Data(startYear=2000,endYear=2021,stationID=[36],fuelType=None,fuelVariation=None,makeFile=True)
 # For fueltype and fuelVariation, set up way to make all lowercase when verifying
 
 #tester = pd.read_csv("FMDB/data (5).csv")

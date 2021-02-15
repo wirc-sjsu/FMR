@@ -295,13 +295,13 @@ class FMDB(object):
                                     fuelTypeList.append(yearDataFrame.fuelType[j])
                                     fuelVarList.append(yearDataFrame.fuelVariation[j])
                                     datesList.append(yearDataFrame.dateTime[j])
-                                elif yearDataFrame.fuelType[j] == fuelType:
+                                elif yearDataFrame.fuelType[j].lower() == fuelType.lower():
                                     if fuelVariation == None:
                                         fuelDataList.append(yearDataFrame.fuelData[j])
                                         fuelTypeList.append(yearDataFrame.fuelType[j])
                                         fuelVarList.append(yearDataFrame.fuelVariation[j])
                                         datesList.append(yearDataFrame.dateTime[j])
-                                    elif yearDataFrame.fuelVariation[j] == fuelVariation:
+                                    elif yearDataFrame.fuelVariation[j].lower() == fuelVariation.lower():
                                         fuelDataList.append(yearDataFrame.fuelData[j])
                                         fuelTypeList.append(yearDataFrame.fuelType[j])
                                         fuelVarList.append(yearDataFrame.fuelVariation[j])
@@ -334,12 +334,11 @@ class FMDB(object):
 #testDB = FMDB(osp.abspath(os.getcwd()))
 #urlList = testDB.update_Station_ID_List("CA")
 #testDB.update_Data_File(urlList)
-#testDB.get_Data(startYear=2000,endYear=2021,stationID=[36],fuelType=None,fuelVariation=None,makeFile=True) 
+#testDB.get_Data(startYear=2000,endYear=2021,stationID=[36],fuelType=None,fuelVariation=None,makeFile=True)
+# For fueltype and fuelVariation, set up way to make all lowercase when verifying
 
 #tester = pd.read_csv("FMDB/data (5).csv")
 #print(tester.dateTime[0])
-
-
 
 
 

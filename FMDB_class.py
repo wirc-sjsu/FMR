@@ -5,12 +5,15 @@ Created on Wed Feb  3 10:11:53 2021
 @author: jackr
 """
 import datetime
+import matplotlib.dates as md
+import matplotlib.pyplot as plt
 import numpy as np
 import os.path as osp
 import os
 import pathlib as plb
 import pandas as pd
 import wget
+
 
 #temp = osp.abspath(os.getcwd())
 #print(temp+"\FMDB")
@@ -27,7 +30,7 @@ class FMDB(object):
         self.exists_here()
     
 
-    # Checks if directory exists. If not, create it
+    # Checks if FMDB directory exists. If not, it is created
     #     
     def exists_here(self):
         if osp.exists(self.folder_path+"/FMDB"):
@@ -36,6 +39,8 @@ class FMDB(object):
             os.makedirs("FMDB")
     
     
+    # Put this outside class ############################################################456456456456456464564
+    #
     # Finds endpoint of a string given a seperator
     #
     # @ Param stringData - general station data in string format
@@ -51,7 +56,8 @@ class FMDB(object):
     # monthEnd = self.get_Index(someString,variableStart,seperator)
     # monthEnd would be equal to 7
     #
-    def get_Index(self,stringData,startOfVariable,seperator):
+    @staticmethod 
+    def get_Index(stringData,startOfVariable,seperator):
         count = startOfVariable
         
         while stringData[count] != str(seperator):
@@ -69,10 +75,50 @@ class FMDB(object):
     # @ Param stateName - state of a station
     # @ Param grupName - group managing a station
     #
+    @staticmethod
     def create_Station_ID_List(self,siteNumber,siteName,latName,lonName,gaccName,stateName,grupName):
         stationDataFrame = pd.DataFrame({"Site_Number": [siteNumber],"Site": [siteName],"Latitude":[latName],"Longitude":[lonName],"GACC":[gaccName],
                                          "State":[stateName],"Group":[grupName]})
         stationDataFrame.to_pickle("FMDB/stationID.pkl")
+    
+    @staticmethod
+    def build_StID(tempUrlList,siteList,latList,lonList,gaccList,stateList,grupList,create=True):
+        
+        urlList = []
+        if create == False:
+            foundList = [False] * len(tempUrlList)
+            stationDataFrame = pd.read_pickle("FMDB/stationID.pkl")
+            for i in range(len(stationDataFrame.Site)):
+                for j in range(len(tempUrlList)):
+                    if stationDataFrame.Site[i] == siteList[j]:
+                        if stationDataFrame.Group[i] == grupList[j]:
+                            urlList.append(tempUrlList[j])
+                            foundList[j] = True
+        
+                    # If a new site is added to the NFMD, append it to the end of the stationID.pkl file
+            numberOfStations = len(stationDataFrame.Site)
+            for m in range(len(foundList)):
+                if foundList[m] == False:
+                    stationDataFrame.loc[len(stationDataFrame.index)] = [numberOfStations,siteList[m],latList[m],lonList[m],
+                                                                         gaccList[m],stateList[m],grupList[m]]
+                    urlList.append(urlList[m])
+                    stationDataFrame.to_pickle("FMDB/stationID.pkl")
+                    stationDataFrame.to_csv("FMDB/stationID.csv",index=False)
+                    numberOfStations += 1
+        else:
+            numberOfStations = 1
+            stationDataFrame = pd.DataFrame({"Site_Number": [0],"Site": [siteList[0]],"Latitude":[latList[0]],"Longitude":[lonList[0]],
+                                             "GACC":[gaccList[0]],"State":[stateList[0]],"Group":[grupList[0]]})
+            stationDataFrame.to_pickle("FMDB/stationID.pkl")
+            for m in range(1,len(tempUrlList)):
+                stationDataFrame.loc[len(stationDataFrame.index)] = [numberOfStations,siteList[m],latList[m],lonList[m],
+                                                                     gaccList[m],stateList[m],grupList[m]]
+                urlList.append(tempUrlList[m])
+                stationDataFrame.to_pickle("FMDB/stationID.pkl")
+                stationDataFrame.to_csv("FMDB/stationID.csv",index=False)
+                numberOfStations += 1
+        return urlList
+    
     
     # Updates the Station ID list
     #
@@ -83,15 +129,12 @@ class FMDB(object):
         # Get site list from NFMD for a specific state
         pd.set_option('display.max_colwidth', -1)
         url = "https://www.wfas.net/nfmd/ajax/states_map_site_xml.php?state="+state
-        #print(url)
         file = wget.download(url)
 
         # Find the total number of stations 
         siteData = pd.read_csv(file,sep="/>",engine='python')
         numberOfStations = int(str(siteData.shape)[4:7])
-        #print(numberOfStations)
         head = [str(i) for i in np.arange(0,numberOfStations+1,1)]
-        #print(head)
     
         # Lists to be used later in the function
         urlList = []
@@ -144,7 +187,22 @@ class FMDB(object):
             else:
                 lonName = float(stringStart[latEnd+7:latEnd+14])
         
+            tempUrlList.append("https://www.wfas.net/nfmd/public/download_site_data.php?site="+stationName+"&gacc="+
+                                   gaccName+"&state="+stateName+"&grup="+grupName)
+            tempSite.append(stationName1)
+            tempLat.append(latName)
+            tempLon.append(lonName)
+            tempGacc.append(gaccName)
+            tempState.append(stateName)
+            tempGrup.append(grupName1)
         
+        kwarg = [tempUrlList,tempSite,tempLat,tempLon,tempGacc,tempState,tempGrup]
+        if osp.exists("FMDB/stationID.pkl"):
+            urlList = self.build_StID(*kwarg,False) 
+        else:
+            urlList = self.build_StID(*kwarg,True)
+                    
+        '''
             # Prepare data for stationID PKL file and get put station data download links in a list
             if os.path.exists("FMDB/stationID.pkl"):
                 tempUrlList.append("https://www.wfas.net/nfmd/public/download_site_data.php?site="+stationName+"&gacc="+
@@ -181,7 +239,7 @@ class FMDB(object):
                     stationDataFrame.to_pickle("FMDB/stationID.pkl")
                     stationDataFrame.to_csv("FMDB/stationID.csv",index=False)
                     numberOfStations += 1
-    
+        '''
             # Removes site list file from local directory
         if os.path.exists(file):
              os.remove(file)
@@ -190,6 +248,12 @@ class FMDB(object):
     
         return urlList
     
+    
+    # Creates/updates the datafiles in the FMDB folder
+    #
+    # @ Param urlList - a list of all of the download links for each station from a given state
+    # i.e. urlList = [https://www.wfas.net/nfmd/public/download_site_data.php?site=Vallecito&gacc=SOCC&state=CA&grup=PGE-SOCC, ...]
+    #
     def update_Data_File(self,urlList):
         if os.path.exists("FMDB/stationID.pkl"):
             stationIdDataFrame = pd.read_pickle("FMDB/stationID.pkl")
@@ -278,12 +342,27 @@ class FMDB(object):
                     os.remove(file)
 
 
-    def get_Data(self,startYear=int(datetime.datetime.now().year),endYear=int(datetime.datetime.now().year),stationID=None,fuelType=None,fuelVariation=None,makeFile=False):
+    def get_Data(self,startYear=int(datetime.datetime.now().year),endYear=int(datetime.datetime.now().year),stationID=None,fuelType=None,fuelVariation=None,
+                 latitude1=None,latitude2=None,longitude1=None,longitude2=None,makeFile=False):
         fuelDataList = []
         fuelTypeList = []
         fuelVarList = []
         datesList = []
         stationName = []
+        
+        if latitude1 < latitude2:
+            lat1 = latitude1
+            lat2 = latitude2
+        else:
+            lat1 = latitude2
+            lat2 = latitude1
+            
+        if longitude1 <  longitude2:
+            lon1 = longitude1
+            lon2 = longitude2
+        else:
+            lon1 = longitude2
+            lon2 = longitude1
         
         if osp.exists("FMDB/stationID.pkl"):
             while startYear <= endYear:
@@ -293,30 +372,63 @@ class FMDB(object):
                     if stationID == None:
                         stationID = range(len(stationDataFrame.Site))
                     for i in stationID:
-                        for j in range(len(yearDataFrame.stationID)):
-                            if yearDataFrame.stationID[j] == i:
-                                for k in range(len(stationDataFrame.Site_Number)):
-                                    if i == stationDataFrame.Site_Number[k]:
-                                        stationName.append(stationDataFrame.Site[k])
-                                if fuelType == None:
-                                    fuelDataList.append(yearDataFrame.fuelData[j])
-                                    fuelTypeList.append(yearDataFrame.fuelType[j])
-                                    fuelVarList.append(yearDataFrame.fuelVariation[j])
-                                    datesList.append(yearDataFrame.dateTime[j])
-                                elif yearDataFrame.fuelType[j].lower() == fuelType.lower():
-                                    if fuelVariation == None:
+                        if -91.0 < lat1 < 91.0 and -91.0 < lat2 < 91.0 and -361 < lon1 < 361 and -361 < lon2 < 361:   
+                            if lat1 < stationDataFrame.Latitude[i] < lat2 and lon1 < stationDataFrame.Longitude[i] < lon2:
+                                for j in range(len(yearDataFrame.stationID)):
+                                    if yearDataFrame.stationID[j] == i:
+                                        for k in range(len(stationDataFrame.Site_Number)):
+                                            if i == stationDataFrame.Site_Number[k]:
+                                                stationName.append(stationDataFrame.Site[k])
+                                        #print(stationName)
+                                        if fuelType == None:
+                                            fuelDataList.append(yearDataFrame.fuelData[j])
+                                            fuelTypeList.append(yearDataFrame.fuelType[j])
+                                            fuelVarList.append(yearDataFrame.fuelVariation[j])
+                                            datesList.append(yearDataFrame.dateTime[j])
+                                        elif yearDataFrame.fuelType[j].lower() == fuelType.lower():
+                                            if fuelVariation == None:
+                                                fuelDataList.append(yearDataFrame.fuelData[j])
+                                                fuelTypeList.append(yearDataFrame.fuelType[j])
+                                                fuelVarList.append(yearDataFrame.fuelVariation[j])
+                                                datesList.append(yearDataFrame.dateTime[j])
+                                            elif yearDataFrame.fuelVariation[j] is None:
+                                                continue
+                                            elif fuelVariation.lower() in yearDataFrame.fuelVariation[j].lower():
+                                                #print("Station ID:",yearDataFrame.stationID[j])
+                                                #print("Fuel Variation:",yearDataFrame.fuelVariation[j])
+                                                #print("")
+                                                fuelDataList.append(yearDataFrame.fuelData[j])
+                                                fuelTypeList.append(yearDataFrame.fuelType[j])
+                                                fuelVarList.append(yearDataFrame.fuelVariation[j])
+                                                datesList.append(yearDataFrame.dateTime[j])
+                                            else:
+                                                continue
+                        else:
+                            for j in range(len(yearDataFrame.stationID)):
+                                if yearDataFrame.stationID[j] == i:
+                                    for k in range(len(stationDataFrame.Site_Number)):
+                                        if i == stationDataFrame.Site_Number[k]:
+                                            stationName.append(stationDataFrame.Site[k])
+                                    if fuelType == None:
                                         fuelDataList.append(yearDataFrame.fuelData[j])
                                         fuelTypeList.append(yearDataFrame.fuelType[j])
                                         fuelVarList.append(yearDataFrame.fuelVariation[j])
                                         datesList.append(yearDataFrame.dateTime[j])
-                                    elif yearDataFrame.fuelVariation[j].lower() == fuelVariation.lower():
-                                        fuelDataList.append(yearDataFrame.fuelData[j])
-                                        fuelTypeList.append(yearDataFrame.fuelType[j])
-                                        fuelVarList.append(yearDataFrame.fuelVariation[j])
-                                        datesList.append(yearDataFrame.dateTime[j])
-                    startYear+=1
+                                    elif yearDataFrame.fuelType[j].lower() == fuelType.lower():
+                                        if fuelVariation == None:
+                                            fuelDataList.append(yearDataFrame.fuelData[j])
+                                            fuelTypeList.append(yearDataFrame.fuelType[j])
+                                            fuelVarList.append(yearDataFrame.fuelVariation[j])
+                                            datesList.append(yearDataFrame.dateTime[j])
+                                        elif fuelVariation.lower() in yearDataFrame.fuelVariation[j].lower():
+                                            fuelDataList.append(yearDataFrame.fuelData[j])
+                                            fuelTypeList.append(yearDataFrame.fuelType[j])
+                                            fuelVarList.append(yearDataFrame.fuelVariation[j])
+                                            datesList.append(yearDataFrame.dateTime[j])
                 else:
                     print(str(startYear)+".pkl does not exist")
+                startYear+=1
+                print(startYear)
             count = 1
             dataFile = "data ("+str(count)+")"
             if osp.exists('FMDB/data.csv'):
@@ -325,28 +437,79 @@ class FMDB(object):
                     dataFile = "data ("+str(count)+")"
             else:
                 dataFile = "data"
+            #[site, date, fuelType, fuel variation, fuelData]
+            #print(stationName)
             fuelDataFrame = pd.DataFrame({"Site": [stationName[0]],"dateTime":[datesList[0]],"fuelType":[fuelTypeList[0]],"fuelVariation":[fuelVarList[0]],"fuelData":[fuelDataList[0]]})
+            print(len(fuelDataList))
+            print(len(stationName))
             for i in range(1,len(fuelDataList)):
                 fuelDataFrame.loc[len(fuelDataFrame.index)] = [stationName[i],datesList[i],fuelTypeList[i],fuelVarList[i],fuelDataList[i]]
             fuelDataFrame['dateTime'] = pd.to_datetime(fuelDataFrame['dateTime'])
-            fuelDataFrame = fuelDataFrame.sort_values('fuelVariation')
-            fuelDataFrame = fuelDataFrame.sort_values('dateTime')
+            b = fuelDataFrame[['Site','fuelType','fuelVariation','dateTime','fuelData']]
+            print(b.Site)
+            c = b.sort_values(by=list(b.columns))
+            #fuelDataFrame = fuelDataFrame.sort_values('fuelVariation')
+            #fuelDataFrame = fuelDataFrame.sort_values('dateTime')
+            #fuelDataFrame = fuelDataFrame.sort_values('Site')
+            #fuelDataFrame.sort_values(by=list(fuelDataFrame.columns))
             if makeFile == True:
-                fuelDataFrame.to_csv('FMDB/'+dataFile+'.csv',index=False, date_format='%Y-%m-%d')
-            else:
-                return fuelDataFrame
+                c.to_csv('FMDB/'+dataFile+'.csv',index=False, date_format='%Y-%m-%d')
+            
+            return c
         else:
             print("stationID.pkl does not exist")
 
+    @staticmethod
+    def plot_Data(dataFrame):
+        print("Here2")
+        print(dataFrame.Site)
+        df = dataFrame.groupby(['Site','fuelType','fuelVariation','dateTime']).mean()
+        mids = df.index
+        combos = mids.droplevel('dateTime').unique()
+        
+        if len(combos) < 50:
+            
+            fig, ax = plt.subplots()
+            legend = []
+            for combo in combos:
+                x = pd.to_datetime(df.loc[combo,:].index)
+                y = df.loc[combo,:].values
+                ax.plot(x,y,'.-')
+                legend.append('{} - {} - {}'.format(*combo))
+            ax.set_ylabel("Fuel Mositure (%)", fontsize = 15)
+            ax.set_xlabel("Time", fontsize = 20)
+            ax.tick_params(axis='both', length = 10, width = 1, labelsize=13)
+            ax.xaxis.set_major_locator(md.YearLocator())
+            ax.xaxis.set_minor_locator(md.MonthLocator(bymonth=[7]))
+            ax.xaxis.set_major_formatter(md.DateFormatter("\n%Y"))
+            ax.xaxis.set_minor_formatter(md.DateFormatter("%b"))
+            plt.grid(True)
+            #plt.legend(legend,bbox_to_anchor=(0.90, 1))
+            plt.legend(legend,loc='upper right')
+            plt.show()
+        else:
+            print('Too many plots!')
+        
+        
+if __name__ == '__main__':
 
-testDB = FMDB(osp.abspath(os.getcwd()))
-#urlList = testDB.update_Station_ID_List("CA")
-#testDB.update_Data_File(urlList)
-testDB.get_Data(startYear=2000,endYear=2021,stationID=[36],fuelType=None,fuelVariation=None,makeFile=True)
-# For fueltype and fuelVariation, set up way to make all lowercase when verifying
+    testDB = FMDB(osp.abspath(os.getcwd()))
+    
+    #python FMDB_class.py arg1 arg2# will run this test code #####
+    
+    #urlList = testDB.update_Station_ID_List("CA")
+    #testDB.update_Data_File(urlList)
+    print("Getting Data")
+    coords = [36.93,37.47,-122.43,-121.84]
+    testDataframe = testDB.get_Data(2000,2021,None,"Chamise","New",*coords,True)
+    #testDataframe = testDB.get_Data(startYear=2000,endYear=2021,stationID=None,fuelType="Chamise",fuelVariation="Old",
+                 #*coords,makeFile=False)
+    print("Plotting")
+    testDB.plot_Data(testDataframe)
+    # For fueltype and fuelVariation, set up way to make all lowercase when verifying
 
-#tester = pd.read_csv("FMDB/data (5).csv")
-#print(tester.dateTime[0])
+    #tester = pd.read_csv("FMDB/data (5).csv")
+    #print(tester.dateTime[0])
 
 
 

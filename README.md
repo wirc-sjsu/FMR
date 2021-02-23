@@ -1,5 +1,9 @@
-<h1>FMDB</h1>
+# FMDB
 
-<h2>Getting Started</h>
-<p>Follow the directions below to get started</p>
-<li>Download the directory onto a local machine</li>  
+The goal of this project is to be able to neatly organize the NFMD data and have a system to easily extract the data you want.
+
+## Getting Started
+
+### Dependencies
+
+*python3

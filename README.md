@@ -6,4 +6,4 @@ The goal of this project is to be able to neatly organize the NFMD data and have
 
 ### Dependencies
 
-*python3
+* python3

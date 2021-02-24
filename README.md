@@ -59,5 +59,5 @@ testDataframe = testDB.get_Data(2000,2021,None,"Chamise","New",*coords,True)
 
 ## Authors
 
-jDrucker1
-Fergui
+* jDrucker1
+* Fergui

@@ -56,3 +56,8 @@ testDB.update_Data_File(urlList)
 coords = [36.93,37.47,-122.43,-121.84]
 testDataframe = testDB.get_Data(2000,2021,None,"Chamise","New",*coords,True)
 ```
+
+## Authors
+
+jDrucker1
+Fergui

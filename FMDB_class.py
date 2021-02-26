@@ -82,6 +82,18 @@ class FMDB(object):
         stationDataFrame.to_pickle("FMDB/stationID.pkl")
     
     @staticmethod
+    def find_SiteName(siteDataFrame,siteNumber):
+        found = False
+        count = 0
+        siteName = ""
+        while found == False:
+            if siteDataFrame.Site_Number[count] == siteNumber:
+                siteName = siteDataFrame.Site[count]
+                found = True
+            count+=1
+        return siteName
+    
+    @staticmethod
     def build_StID(tempUrlList,siteList,latList,lonList,gaccList,stateList,grupList,create=True):
         
         urlList = []
@@ -376,21 +388,20 @@ class FMDB(object):
                             if lat1 < stationDataFrame.Latitude[i] < lat2 and lon1 < stationDataFrame.Longitude[i] < lon2:
                                 for j in range(len(yearDataFrame.stationID)):
                                     if yearDataFrame.stationID[j] == i:
-                                        for k in range(len(stationDataFrame.Site_Number)):
-                                            if i == stationDataFrame.Site_Number[k]:
-                                                stationName.append(stationDataFrame.Site[k])
                                         #print(stationName)
                                         if fuelType == None:
                                             fuelDataList.append(yearDataFrame.fuelData[j])
                                             fuelTypeList.append(yearDataFrame.fuelType[j])
                                             fuelVarList.append(yearDataFrame.fuelVariation[j])
                                             datesList.append(yearDataFrame.dateTime[j])
+                                            stationName.append(self.find_SiteName(stationDataFrame,i))
                                         elif yearDataFrame.fuelType[j].lower() == fuelType.lower():
                                             if fuelVariation == None:
                                                 fuelDataList.append(yearDataFrame.fuelData[j])
                                                 fuelTypeList.append(yearDataFrame.fuelType[j])
                                                 fuelVarList.append(yearDataFrame.fuelVariation[j])
                                                 datesList.append(yearDataFrame.dateTime[j])
+                                                stationName.append(self.find_SiteName(stationDataFrame,i))
                                             elif yearDataFrame.fuelVariation[j] is None:
                                                 continue
                                             elif fuelVariation.lower() in yearDataFrame.fuelVariation[j].lower():
@@ -401,6 +412,7 @@ class FMDB(object):
                                                 fuelTypeList.append(yearDataFrame.fuelType[j])
                                                 fuelVarList.append(yearDataFrame.fuelVariation[j])
                                                 datesList.append(yearDataFrame.dateTime[j])
+                                                stationName.append(self.find_SiteName(stationDataFrame,i))
                                             else:
                                                 continue
                         else:
@@ -414,17 +426,20 @@ class FMDB(object):
                                         fuelTypeList.append(yearDataFrame.fuelType[j])
                                         fuelVarList.append(yearDataFrame.fuelVariation[j])
                                         datesList.append(yearDataFrame.dateTime[j])
+                                        stationName.append(self.find_SiteName(stationDataFrame,i))
                                     elif yearDataFrame.fuelType[j].lower() == fuelType.lower():
                                         if fuelVariation == None:
                                             fuelDataList.append(yearDataFrame.fuelData[j])
                                             fuelTypeList.append(yearDataFrame.fuelType[j])
                                             fuelVarList.append(yearDataFrame.fuelVariation[j])
                                             datesList.append(yearDataFrame.dateTime[j])
+                                            stationName.append(self.find_SiteName(stationDataFrame,i))
                                         elif fuelVariation.lower() in yearDataFrame.fuelVariation[j].lower():
                                             fuelDataList.append(yearDataFrame.fuelData[j])
                                             fuelTypeList.append(yearDataFrame.fuelType[j])
                                             fuelVarList.append(yearDataFrame.fuelVariation[j])
                                             datesList.append(yearDataFrame.dateTime[j])
+                                            stationName.append(self.find_SiteName(stationDataFrame,i))
                 else:
                     print(str(startYear)+".pkl does not exist")
                 startYear+=1
@@ -440,13 +455,10 @@ class FMDB(object):
             #[site, date, fuelType, fuel variation, fuelData]
             #print(stationName)
             fuelDataFrame = pd.DataFrame({"Site": [stationName[0]],"dateTime":[datesList[0]],"fuelType":[fuelTypeList[0]],"fuelVariation":[fuelVarList[0]],"fuelData":[fuelDataList[0]]})
-            print(len(fuelDataList))
-            print(len(stationName))
             for i in range(1,len(fuelDataList)):
                 fuelDataFrame.loc[len(fuelDataFrame.index)] = [stationName[i],datesList[i],fuelTypeList[i],fuelVarList[i],fuelDataList[i]]
             fuelDataFrame['dateTime'] = pd.to_datetime(fuelDataFrame['dateTime'])
             b = fuelDataFrame[['Site','fuelType','fuelVariation','dateTime','fuelData']]
-            print(b.Site)
             c = b.sort_values(by=list(b.columns))
             #fuelDataFrame = fuelDataFrame.sort_values('fuelVariation')
             #fuelDataFrame = fuelDataFrame.sort_values('dateTime')
@@ -460,9 +472,7 @@ class FMDB(object):
             print("stationID.pkl does not exist")
 
     @staticmethod
-    def plot_Data(dataFrame):
-        print("Here2")
-        print(dataFrame.Site)
+    def plot_line_Data(dataFrame):
         df = dataFrame.groupby(['Site','fuelType','fuelVariation','dateTime']).mean()
         mids = df.index
         combos = mids.droplevel('dateTime').unique()
@@ -485,11 +495,19 @@ class FMDB(object):
             ax.xaxis.set_minor_formatter(md.DateFormatter("%b"))
             plt.grid(True)
             #plt.legend(legend,bbox_to_anchor=(0.90, 1))
-            plt.legend(legend,loc='upper right')
+            plt.legend(legend,loc='upper left')
             plt.show()
         else:
             print('Too many plots!')
-        
+    
+    @staticmethod
+    def plot_err_data(dataFrame):
+        dataFrame.index = pd.to_datetime(dataFrame.dateTime)
+        df = dataFrame.groupby([dataFrame.index.year,dataFrame.index.month]).agg(['mean','std'])
+        print(df.columns)
+        return df
+        #plt.plot(dataFrame.index.month,df.mean, yerr = df.std)
+    
         
 if __name__ == '__main__':
 
@@ -500,12 +518,13 @@ if __name__ == '__main__':
     #urlList = testDB.update_Station_ID_List("CA")
     #testDB.update_Data_File(urlList)
     print("Getting Data")
-    coords = [36.93,37.47,-122.43,-121.84]
-    testDataframe = testDB.get_Data(2000,2021,None,"Chamise","New",*coords,True)
+    coords = [36.93,40.75,-122.43,-118.81]
+    testDataframe = testDB.get_Data(2000,2021,None,"Chamise","Old",*coords,False)
     #testDataframe = testDB.get_Data(startYear=2000,endYear=2021,stationID=None,fuelType="Chamise",fuelVariation="Old",
                  #*coords,makeFile=False)
     print("Plotting")
-    testDB.plot_Data(testDataframe)
+    last=testDB.plot_err_data(testDataframe)
+    #testDB.plot_line_Data(testDataframe)
     # For fueltype and fuelVariation, set up way to make all lowercase when verifying
 
     #tester = pd.read_csv("FMDB/data (5).csv")

@@ -139,7 +139,7 @@ class FMDB(object):
     def update_Station_ID_List(self,state="CA"):
     
         # Get site list from NFMD for a specific state
-        pd.set_option('display.max_colwidth', -1)
+        pd.set_option('display.max_colwidth', None)
         url = "https://www.wfas.net/nfmd/ajax/states_map_site_xml.php?state="+state
         file = wget.download(url)
 
@@ -266,14 +266,14 @@ class FMDB(object):
     # @ Param urlList - a list of all of the download links for each station from a given state
     # i.e. urlList = [https://www.wfas.net/nfmd/public/download_site_data.php?site=Vallecito&gacc=SOCC&state=CA&grup=PGE-SOCC, ...]
     #
-    def update_Data_File(self,urlList):
+    def update_Data_File(self,urlList,startYear=int(datetime.datetime.now().year)-10,endYear=int(datetime.datetime.now().year)):
         if os.path.exists("FMDB/stationID.pkl"):
             stationIdDataFrame = pd.read_pickle("FMDB/stationID.pkl")
         
             # Years you would like data for. Each year is made into a seperate PKL file
             # For example: 2000.pkl, 2001.pkl, etc.
-            yearStart=int(datetime.datetime.now().year)-10
-            yearEnd = int(datetime.datetime.now().year)
+            yearStart = startYear
+            yearEnd = endYear
 
             # Loop to download data and get the needed variables
             for i in urlList:
@@ -503,33 +503,133 @@ class FMDB(object):
     @staticmethod
     def plot_err_data(dataFrame):
         dataFrame.index = pd.to_datetime(dataFrame.dateTime)
-        df = dataFrame.groupby([dataFrame.index.year,dataFrame.index.month]).agg(['mean','std'])
-        print(df.columns)
+        df = dataFrame.groupby([dataFrame.index.year]).agg(['mean','std'])
+        #df = dataFrame.groupby([dataFrame.index.year, dataFrame.index.month]).agg(['mean','std'])
+        df.index.names = ['year','month']
+        ##df1 = dataFrame.groupby([dataFrame.index.year]).agg(['mean','std'])
+        #df2 = df = dataFrame.groupby([dataFrame.index.year,dataFrame.index.month]).std()
+        #print(df.columns)
         return df
         #plt.plot(dataFrame.index.month,df.mean, yerr = df.std)
     
         
+    @staticmethod
+    def fill_list(dataList,outputList):
+        for i in dataList.values:
+            outputList.append(i[0])
+
+
 if __name__ == '__main__':
 
     testDB = FMDB(osp.abspath(os.getcwd()))
-    
+    #print(last.index.names)
+    #print(last.columns)
+    #print(last['fuelData','std'][:])
+    #print(last['fuelData','std'].index[0][1])
+    #plt.plot(last['fuelData','std'])
+    #plt.plot(range(10),range(10))
+    #print(last)
     #python FMDB_class.py arg1 arg2# will run this test code #####
     
     #urlList = testDB.update_Station_ID_List("CA")
-    #testDB.update_Data_File(urlList)
-    print("Getting Data")
+    #testDB.update_Data_File(urlList,2000,2021)
+    #print("Getting Data")
+    #hi = pd.read_pickle("FMDB/2001.pkl")
     coords = [36.93,40.75,-122.43,-118.81]
     testDataframe = testDB.get_Data(2000,2021,None,"Chamise","Old",*coords,False)
+    testDataframe2 = testDB.get_Data(2000,2021,None,"Chamise","New",*coords,False)
     #testDataframe = testDB.get_Data(startYear=2000,endYear=2021,stationID=None,fuelType="Chamise",fuelVariation="Old",
                  #*coords,makeFile=False)
-    print("Plotting")
+    #print("Plotting")
     last=testDB.plot_err_data(testDataframe)
+    last2 = testDB.plot_err_data(testDataframe2)
+    
+    #print(pd.to_datetime(last.index.levels[1].astype(str))+ last.index.levels[0], format='%Y%B')
+    #print(len(last.index.levels[0]))
+    #print(len(last.index.levels[1]))
+    #print(last.level)
+    #print(last.droplevel(0))
+    #last.rename('year',level=0)
+    #f1 = pd.to_datetime([f'{y}-{m}' for y, m in zip(last.index.levels[0], last.index.levels[1])])
+    #print(last.index[0][0])
+    #print(last.head())
+    dates = []
+    means = []
+    stds = []
+    for i in range(len(last.index)):
+        dates.append(str(last.index[i][0])+'-'+str(last.index[i][1]))
+        #dates.append(str(last.index[i]))
+    #f21 = last.loc[2001,('fuelData','std')]
+    std1 = last.loc[:,last.columns.get_level_values(1) == 'std']
+    mean1 = last.loc[:,last.columns.get_level_values(1) == 'mean']
+    #for i in std1.values:
+    #    print('last:',i[0])
+    dates1 = pd.to_datetime(dates)
+   
+    testDB.fill_list(mean1,means)
+    testDB.fill_list(std1,stds)
+    print(len(dates1))
+    print(len(stds))
+    print(len(means))
+    means = np.array(means)
+    stds = np.array(stds)
+    
+    
+    #######
+    
+    dates2 = []
+    means2 = []
+    stds2 = []
+    for i in range(len(last2.index)):
+        dates2.append(str(last2.index[i][0])+'-'+str(last2.index[i][1]))
+        #dates.append(str(last.index[i]))
+    #f21 = last.loc[2001,('fuelData','std')]
+    std3 = last2.loc[:,last2.columns.get_level_values(1) == 'std']
+    mean3 = last2.loc[:,last2.columns.get_level_values(1) == 'mean']
+    #for i in std1.values:
+    #    print('last:',i[0])
+    dates2 = pd.to_datetime(dates2)
+   
+    testDB.fill_list(mean3,means2)
+    testDB.fill_list(std3,stds2)
+    means5 = np.array(means2)
+    stds5 = np.array(stds2)
+    
+    #######
+    
+    fig, ax = plt.subplots()
+    #plt.xlim(min(dates1.year),max(dates1.year))
+    
+    ax.plot(dates2,means5)
+    ax.fill_between(dates2, means5 - stds5, means5 + stds5, alpha=0.2)
+    ax.plot(dates1,means)
+    ax.fill_between(dates1, means - stds, means + stds, alpha=0.2)
+    ax.grid(True)
+    #ax.locator_params(axis='x', nbins=len(np.unique(dates1.year)))
+    years = list(np.unique(dates1.year))
+    years.append(years[-1]+1)
+    #ax.xaxis.set_minor_formatter(md.DateFormatter("%b"))
+    plt.xticks(pd.to_datetime(['{:04d}-01-01'.format(year) for year in years]))
+    ax.xaxis.set_major_formatter(md.DateFormatter('%Y'))
+    plt.setp(ax.xaxis.get_minorticklabels(),size=12,rotation=45)
+    plt.legend(["Chamise - New","Chamise - Old"])
+    plt.show()
+    #f32 = last.get_level_values(1)
+    #fq = pd.to_datetime(dates)
+    #g2 = last["mean"]
+    #g1 = last.iloc[:, last.columns.get_level_values(1)=='std']
+    #last.plot(y="mean",yerr="std")
+    #last.unstack(level=0).plot(subplots=False)
+    print("done")
+    #print(last.names)
+    #last.index = pd.to_datetime(last.index.levels[0],last.index.levels[1])
+    #print(last.unstack(level=0)[0])
+    #print(last.reset_index(level=['fuelData','std']))
     #testDB.plot_line_Data(testDataframe)
     # For fueltype and fuelVariation, set up way to make all lowercase when verifying
 
     #tester = pd.read_csv("FMDB/data (5).csv")
     #print(tester.dateTime[0])
-
 
 
      

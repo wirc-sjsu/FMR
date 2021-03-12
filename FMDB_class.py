@@ -25,18 +25,19 @@ class FMDB(object):
     #
     # @ Param folder_path - path where this script is located
     #
-    def __init__(self, folder_path):
-        self.folder_path = folder_path
+    def __init__(self, folder_path=osp.abspath(os.getcwd())):
+        self.folder_path = folder_path+"/FMDB"
         self.exists_here()
+        self.station_path = osp.join(self.folder_path,"stationID.pkl")
     
 
     # Checks if FMDB directory exists. If not, it is created
     #     
     def exists_here(self):
-        if osp.exists(self.folder_path+"/FMDB"):
+        if osp.exists(self.folder_path):
             print("FMDB Folder Exists")
         else:
-            os.makedirs("FMDB")
+            os.makedirs(self.folder_path)
     
     
     # Put this outside class ############################################################456456456456456464564
@@ -65,22 +66,6 @@ class FMDB(object):
         return count
     
     
-    # Creates a PKL file with NFMD stations
-    #
-    # @ Param siteNumber - site number corresponding to a station
-    # @ Param siteName - name of a station
-    # @ Param latName - latitude of a station
-    # @ Param lonName - longitude of a station
-    # @ Param gaccName - geographical area coordination center of a station
-    # @ Param stateName - state of a station
-    # @ Param grupName - group managing a station
-    #
-    @staticmethod
-    def create_Station_ID_List(self,siteNumber,siteName,latName,lonName,gaccName,stateName,grupName):
-        stationDataFrame = pd.DataFrame({"Site_Number": [siteNumber],"Site": [siteName],"Latitude":[latName],"Longitude":[lonName],"GACC":[gaccName],
-                                         "State":[stateName],"Group":[grupName]})
-        stationDataFrame.to_pickle("FMDB/stationID.pkl")
-    
     @staticmethod
     def find_SiteName(siteDataFrame,siteNumber):
         found = False
@@ -93,13 +78,13 @@ class FMDB(object):
             count+=1
         return siteName
     
-    @staticmethod
-    def build_StID(tempUrlList,siteList,latList,lonList,gaccList,stateList,grupList,create=True):
+    
+    def build_StID(self,tempUrlList,siteList,latList,lonList,gaccList,stateList,grupList,create=True):
         
         urlList = []
         if create == False:
             foundList = [False] * len(tempUrlList)
-            stationDataFrame = pd.read_pickle("FMDB/stationID.pkl")
+            stationDataFrame = pd.read_pickle(self.station_path) # make this change wherever FMDB/stationID.pkl
             for i in range(len(stationDataFrame.Site)):
                 for j in range(len(tempUrlList)):
                     if stationDataFrame.Site[i] == siteList[j]:
@@ -214,44 +199,7 @@ class FMDB(object):
         else:
             urlList = self.build_StID(*kwarg,True)
                     
-        '''
-            # Prepare data for stationID PKL file and get put station data download links in a list
-            if os.path.exists("FMDB/stationID.pkl"):
-                tempUrlList.append("https://www.wfas.net/nfmd/public/download_site_data.php?site="+stationName+"&gacc="+
-                                   gaccName+"&state="+stateName+"&grup="+grupName)
-                tempSite.append(stationName1)
-                tempLat.append(latName)
-                tempLon.append(lonName)
-                tempGacc.append(gaccName)
-                tempState.append(stateName)
-                tempGrup.append(grupName1)
-            else:
-                self.create_Station_ID_List(0,stationName1,latName,lonName,gaccName,stateName,grupName1)
-                urlList.append("https://www.wfas.net/nfmd/public/download_site_data.php?site="+stationName+"&gacc="+
-                               gaccName+"&state="+stateName+"&grup="+grupName)
-
-        # Sorts download links in order of sites in stationID.pkl file
-        foundList = [False] * len(tempUrlList)
-        if os.path.exists("FMDB/stationID.pkl"):
-            stationDataFrame = pd.read_pickle("FMDB/stationID.pkl")
-            for k in range(len(stationDataFrame.Site)):
-                for l in range(len(tempUrlList)):
-                    if stationDataFrame.Site[k] == tempSite[l]:
-                        if stationDataFrame.Group[k] == tempGrup[l]:
-                            urlList.append(tempUrlList[l])
-                            foundList[l] = True
         
-            # If a new site is added to the NFMD, append it to the end of the stationID.pkl file
-            numberOfStations = len(stationDataFrame.Site)
-            for m in range(len(foundList)):
-                if foundList[m] == False:
-                    stationDataFrame.loc[len(stationDataFrame.index)] = [numberOfStations,tempSite[m],tempLat[m],tempLon[m],
-                                                                     tempGacc[m],tempState[m],tempGrup[m]]
-                    urlList.append(tempUrlList[m])
-                    stationDataFrame.to_pickle("FMDB/stationID.pkl")
-                    stationDataFrame.to_csv("FMDB/stationID.csv",index=False)
-                    numberOfStations += 1
-        '''
             # Removes site list file from local directory
         if os.path.exists(file):
              os.remove(file)
@@ -266,7 +214,7 @@ class FMDB(object):
     # @ Param urlList - a list of all of the download links for each station from a given state
     # i.e. urlList = [https://www.wfas.net/nfmd/public/download_site_data.php?site=Vallecito&gacc=SOCC&state=CA&grup=PGE-SOCC, ...]
     #
-    def update_Data_File(self,urlList,startYear=int(datetime.datetime.now().year)-10,endYear=int(datetime.datetime.now().year)):
+    def update_Data_File(self,urlList,startYear=2000,endYear=int(datetime.datetime.now().year)):
         if os.path.exists("FMDB/stationID.pkl"):
             stationIdDataFrame = pd.read_pickle("FMDB/stationID.pkl")
         
@@ -282,6 +230,7 @@ class FMDB(object):
             
                 # Read downloaded file for identifying the station
                 # For example: https://www.wfas.net/nfmd/public/download_site_data.php?site=12%20Rd%20@%2054%20Rd&gacc=NOCC&state=CA&grup=Tahoe%20NF
+                # I.E. from above: site = 12 Rd @ 54, gacc = NOCC, etc.
                 stringStart = str(i)
                 
                 stationEnd = self.get_Index(stringStart,61,'&')
@@ -294,7 +243,7 @@ class FMDB(object):
                 else:
                     currentGroup = stringStart[stateEnd+6::].replace("%20"," ")
                 currentSite = str(i)[61:stationEnd].replace("%20"," ")
-            
+                '''
                 # Get site number corresponding to the station in the stationID.pkl file
                 #
                 # If update_Data_File is called without the stationID list being updated
@@ -308,7 +257,7 @@ class FMDB(object):
                 if siteExists == False:
                     print(currentSite+" not in stationID file")
                     break
-
+                '''
             
                 head = ["datetime","fuel","percent"]
                 data1 = pd.read_csv(file,sep="	",names=head,skiprows=1, usecols=[4,5,6])
@@ -352,6 +301,8 @@ class FMDB(object):
                     count+=1
                 if os.path.exists(file):
                     os.remove(file)
+        else:
+            print("stationID.pkl does not exist")
 
 
     def get_Data(self,startYear=int(datetime.datetime.now().year),endYear=int(datetime.datetime.now().year),stationID=None,fuelType=None,fuelVariation=None,
@@ -389,7 +340,7 @@ class FMDB(object):
                                 for j in range(len(yearDataFrame.stationID)):
                                     if yearDataFrame.stationID[j] == i:
                                         #print(stationName)
-                                        if fuelType == None:
+                                        if fuelType == None or fuelType == "None":
                                             fuelDataList.append(yearDataFrame.fuelData[j])
                                             fuelTypeList.append(yearDataFrame.fuelType[j])
                                             fuelVarList.append(yearDataFrame.fuelVariation[j])
@@ -402,12 +353,9 @@ class FMDB(object):
                                                 fuelVarList.append(yearDataFrame.fuelVariation[j])
                                                 datesList.append(yearDataFrame.dateTime[j])
                                                 stationName.append(self.find_SiteName(stationDataFrame,i))
-                                            elif yearDataFrame.fuelVariation[j] is None:
+                                            elif yearDataFrame.fuelVariation[j] is None: # If user specifies a fuel variation, dont take None
                                                 continue
                                             elif fuelVariation.lower() in yearDataFrame.fuelVariation[j].lower():
-                                                #print("Station ID:",yearDataFrame.stationID[j])
-                                                #print("Fuel Variation:",yearDataFrame.fuelVariation[j])
-                                                #print("")
                                                 fuelDataList.append(yearDataFrame.fuelData[j])
                                                 fuelTypeList.append(yearDataFrame.fuelType[j])
                                                 fuelVarList.append(yearDataFrame.fuelVariation[j])
@@ -415,6 +363,7 @@ class FMDB(object):
                                                 stationName.append(self.find_SiteName(stationDataFrame,i))
                                             else:
                                                 continue
+                        # If coordinate points are non existent, but you have stations in args
                         else:
                             for j in range(len(yearDataFrame.stationID)):
                                 if yearDataFrame.stationID[j] == i:
@@ -440,11 +389,13 @@ class FMDB(object):
                                             fuelVarList.append(yearDataFrame.fuelVariation[j])
                                             datesList.append(yearDataFrame.dateTime[j])
                                             stationName.append(self.find_SiteName(stationDataFrame,i))
+                # If data file does not exist (i.e. you have data files from 2000-2021 but you call 1999)
                 else:
                     print(str(startYear)+".pkl does not exist")
                 startYear+=1
                 print(startYear)
             count = 1
+            # instead of data.csv, use currentDateTime.csv (to seconds 20200309_0209+seconds.csv)
             dataFile = "data ("+str(count)+")"
             if osp.exists('FMDB/data.csv'):
                 while osp.exists("FMDB/"+dataFile+".csv"):
@@ -475,6 +426,7 @@ class FMDB(object):
     def plot_line_Data(dataFrame):
         df = dataFrame.groupby(['Site','fuelType','fuelVariation','dateTime']).mean()
         mids = df.index
+        # Dropping one level from multi index (datetime) and find all the unique combinations of the other levels
         combos = mids.droplevel('dateTime').unique()
         
         if len(combos) < 50:
@@ -499,6 +451,155 @@ class FMDB(object):
             plt.show()
         else:
             print('Too many plots!')
+    
+    
+    @staticmethod
+    def plot_std1(self,dataFrame):
+        dataFrame.index = pd.to_datetime(dataFrame.dateTime)
+        df = dataFrame.groupby(['fuelType','fuelVariation',dataFrame.index.year, dataFrame.index.month]).agg(['mean','std'])
+
+        df.index.names = ['fuelType','fuelVariation','year','month']
+
+        mid = df.index
+
+        combos = mid.droplevel('month').unique()
+        combos1 = combos.droplevel('year').unique()
+        
+        fig, ax = plt.subplots()
+        legend = []
+        months=[]
+        count=0
+        for combo in combos1:
+            means=[]
+            stds=[]
+            dates = []
+            print('combo',combo)
+            tempFrame = df.loc[combo,:]
+            for i in range(len(tempFrame.index)):
+                dates.append(str(tempFrame.index[i][0])+'-'+str(tempFrame.index[i][1]))
+            dates1 = pd.to_datetime(dates)
+            mean = tempFrame.loc[:,tempFrame.columns.get_level_values(1) == 'mean']
+            self.fill_list(mean,means)
+            means = np.array(means)
+            std = tempFrame.loc[:,tempFrame.columns.get_level_values(1) == 'std']
+            self.fill_list(std,stds)
+            stds = np.array(stds)
+            ax.plot(dates1,means,'.-')
+            ax.fill_between(dates1, means - stds, means + stds, alpha=0.2)
+            legend.append('{} - {}'.format(*combo))
+            count+=1
+        ax.set_ylabel("Fuel Mositure (%)", fontsize = 15)
+        ax.set_xlabel("Time", fontsize = 20)
+        ax.tick_params(axis='both', length = 10, width = 1, labelsize=13)
+        ax.xaxis.set_major_locator(md.YearLocator())
+        ax.xaxis.set_minor_locator(md.MonthLocator(bymonth=[7]))
+        ax.xaxis.set_major_formatter(md.DateFormatter("\n%Y"))
+        ax.xaxis.set_minor_formatter(md.DateFormatter("%b"))
+        plt.grid(True)
+        plt.legend(legend,loc='upper left')
+        plt.show()
+            #mean = df.loc[combo,:]
+        #print(mean)
+        ##self.fill_list(mean,means)
+        #self.fill_list(month, months)
+        #testDB.fill_list(std1,stds)
+        #print(len(dates1))
+        #print(len(stds))
+        #print(len(means))
+        ##means = np.array(means)
+        #months = np.array(months)
+        #print(" ")
+        #print('mean:',means)
+        #std3 = df.loc[:,df.columns.get_level_values(1) == 'std']
+        #ax.plot(dates1,mean,'.-')
+        #legend.append('{} - {}'.format(*combo))
+    
+    @staticmethod
+    def plot_std2(self,dataFrame):
+        dataFrame.index = pd.to_datetime(dataFrame.dateTime)
+        df = dataFrame.groupby(['fuelType','fuelVariation',dataFrame.index.year, dataFrame.index.month]).mean()
+        df2 = dataFrame.groupby(['fuelType','fuelVariation',dataFrame.index.year, dataFrame.index.month]).std()
+        df3 = dataFrame.groupby(['fuelType','fuelVariation',dataFrame.index.year, dataFrame.index.month]).agg(['mean','std'])
+
+        df.index.names = ['fuelType','fuelVariation','year','month']
+        df2.index.names = ['fuelType','fuelVariation','year','month']
+        df3.index.names = ['fuelType','fuelVariation','year','month']
+        
+        mids = df.index
+        mid2 = df2.index
+        mid3 = df3.index
+        
+        combos = mids.droplevel('month').unique()
+        combos1 = combos.droplevel('year').unique()
+        combos2 = mid2.droplevel('month').unique()
+        combos3 = combos2.droplevel('year').unique()
+        combos4 = mid3.droplevel('month').unique()
+        combos5 = combos4.droplevel('year').unique()
+        
+        fig, ax = plt.subplots()
+        legend = []
+        dates = []
+        
+        for i in range(len(df.index)):
+            dates.append(str(df.index[i][2])+'-'+str(df.index[i][3]))
+        dates1 = pd.to_datetime(dates)
+        
+        for combo in combos1:
+            month = df.loc[:,df.columns.get_level_values(0) == 'month']
+            year = df.loc[:,df.columns.get_level_values(0) == 'year']
+            for i in range(len(df.index)):
+                dates.append(str(year)+'-'+str(month))
+            dates1 = pd.to_datetime(dates)
+            mean = df.loc[:,df.columns.get_level_values(1) == 'mean']
+            std3 = df.loc[:,df.columns.get_level_values(1) == 'std']
+            ax.plot(dates1,mean,'.-')
+            legend.append('{} - {}'.format(*combo))
+            
+        for combo in combos3:
+            std = df2.loc[combo,:].values
+        #print(list(std))
+        #return(y.flatten())
+        #print(np.array(y)[:,:][0].shape)
+        #ax.fill_between(dates1, y.flatten() - std.flatten(), y.flatten() + std.flatten(), alpha=0.2)
+            #print(y2)
+            #ax.plot(dates2,means5)
+            #ax.fill_between(dates2, means5 - stds5, means5 + stds5, alpha=0.2)
+        ax.set_ylabel("Fuel Mositure (%)", fontsize = 15)
+        ax.set_xlabel("Time", fontsize = 20)
+        ax.tick_params(axis='both', length = 10, width = 1, labelsize=13)
+        ax.xaxis.set_major_locator(md.YearLocator())
+        ax.xaxis.set_minor_locator(md.MonthLocator(bymonth=[7]))
+        ax.xaxis.set_major_formatter(md.DateFormatter("\n%Y"))
+        ax.xaxis.set_minor_formatter(md.DateFormatter("%b"))
+        plt.grid(True)
+        #plt.legend(legend,bbox_to_anchor=(0.90, 1))
+        plt.legend(legend,loc='upper left')
+        plt.show()
+        
+        '''
+        dates = []
+        means = []
+        stds = []
+        #for i in range(len(df.index)):
+            #dates.append(str(df.index[i][0])+'-'+str(df.index[i][1]))
+            
+        #fig, ax = plt.subplots()
+        #legend = []
+        for combo in combos1:
+            x = pd.to_datetime(df.loc[combo,:,:].index)
+            y = df.loc[combo,:,:].values
+            #ax.plot(x,y,'.-')
+            #legend.append('{} - {}'.format(*combo))
+        #plt.show()
+        '''
+        '''    
+        std1 = df.loc[:,df.columns.get_level_values(1) == 'std']
+        mean1 = df.loc[:,df.columns.get_level_values(1) == 'mean']
+        self.fill_list(mean1,means)
+        self.fill_list(std1,stds)
+        means = np.array(means)
+        stds = np.array(stds)
+        '''
     
     @staticmethod
     def plot_err_data(dataFrame):
@@ -536,7 +637,13 @@ if __name__ == '__main__':
     #print("Getting Data")
     #hi = pd.read_pickle("FMDB/2001.pkl")
     coords = [36.93,40.75,-122.43,-118.81]
-    testDataframe = testDB.get_Data(2000,2021,None,"Chamise","Old",*coords,False)
+
+    ## csv output statistics
+    testDataframe = testDB.get_Data(2000,2021,None,"Chamise",None,*coords,False)
+    testDB.plot_std1(testDB,testDataframe)
+    #testDB.plot_std2(testDB,testDataframe)
+    #print(what[0])
+    '''
     testDataframe2 = testDB.get_Data(2000,2021,None,"Chamise","New",*coords,False)
     #testDataframe = testDB.get_Data(startYear=2000,endYear=2021,stationID=None,fuelType="Chamise",fuelVariation="Old",
                  #*coords,makeFile=False)
@@ -630,6 +737,6 @@ if __name__ == '__main__':
 
     #tester = pd.read_csv("FMDB/data (5).csv")
     #print(tester.dateTime[0])
-
+    '''
 
      

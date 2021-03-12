@@ -18,13 +18,13 @@ The goal of this project is to be able to neatly organize the NFMD data into a d
 * import the FMDB_class.py
 
 ```
-import FMDB_class
+from FMDB_class import FMDB
 ```
 
-* Create a FMDB object. The object currently needs you to give it the directory path, but this won't be required in the next version.
+* Create a FMDB object.
 
 ```
-testDB = new FMDB_class(path to current directory)
+testDB = FMDB()
 ```
 
 * Create a station ID list for the state you would like the data from. 

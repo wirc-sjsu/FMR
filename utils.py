@@ -10,6 +10,9 @@ BASE_URLS = {
 _GACCS = ['AICC', 'EACC', 'EGBC', 'NICC', 'NOCC', 'NRCC', 'NRCC', 
         'NWCC', 'RMCC', 'SACC', 'SOCC', 'SWCC', 'WGBC']
 
+def get_all_gaccs():
+    return _GACCS
+
 def gaccURL(gacc, **kargs):
     return BASE_URLS['gacc_sites'].format(gacc)
 

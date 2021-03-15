@@ -15,6 +15,7 @@ import logging
 import io
 from collections.abc import Iterator
 from lxml import etree
+from utils import _GACCS
 from utils import *
 
 pd.set_option('display.max_colwidth', None)
@@ -55,11 +56,11 @@ class FMDB(object):
         if osp.exists(self.stations_path):
             df_local = self.sites()
             lenLocal = len(df_local)
-            df_new = df[~df.isin(df_local)].dropna()
+            df_new = df[(~df.isin(df_local)[['site','gacc','state','grup','lat','lng']]).any(1)]
             lenNew = len(df_new)
-            df_new.index = range(lenLocal,lenLocal+lenNew-1)
+            df_new.index = range(lenLocal,lenLocal+lenNew)
             df_new.index.name = 'site_number'
-            df_local.append(df_new)
+            df_local = df_local.append(df_new)
             df_local.to_pickle(self.stations_path)
             df_local.to_csv(osp.join(self.folder_path,"stationID.csv"))
         else:
@@ -69,30 +70,6 @@ class FMDB(object):
         df_local.to_pickle(self.stations_path)
         df_local.to_csv(osp.join(self.folder_path,"stationID.csv"))
     
-    # Updates the site_number from the list of existent sites
-    #
-    # @ Param state - state that you want fuel mositure from
-    #
-    def update_state_stations(self, state="CA"):
-        # Get site list from NFMD for a specific state
-        url = stateURL(state)
-        # read page
-        page = getURL(url)
-        # Find the total number of stations 
-        tree = etree.fromstring(page.content)
-        numberOfStations = len(tree)
-        logging.info('{} stations found'.format(numberOfStations))
-        stations = []
-        for site in tree:
-            attribs = dict(site.attrib)
-            attribs.update({'url': siteURL(**attribs)})
-            stations.append(attribs)
-
-        df = pd.DataFrame(stations)
-        df.lat = df.lat.astype(float)
-        df.lng = df.lng.astype(float)
-        self.build_stations(df) 
-
     # Updates the site_number from the list of existent sites
     #
     # @ Param gacc - gacc that you want fuel mositure from
@@ -113,10 +90,40 @@ class FMDB(object):
             stations.append(attribs)
 
         df = pd.DataFrame(stations)
-        df.lat = df.lat.astype(float)
-        df.lng = df.lng.astype(float)
-        self.build_stations(df)
-    
+        if len(df):
+            df.lat = df.lat.astype(float)
+            df.lng = df.lng.astype(float)
+            self.build_stations(df)
+        else:
+            logging.warning('No stations to be built')
+
+    # Updates the site_number from the list of existent sites
+    #
+    # @ Param state - state that you want fuel mositure from
+    #
+    def update_state_stations(self, state="CA"):
+        # Get site list from NFMD for a specific state
+        url = stateURL(state)
+        # read page
+        page = getURL(url)
+        # Find the total number of stations 
+        tree = etree.fromstring(page.content)
+        numberOfStations = len(tree)
+        logging.info('{} stations found'.format(numberOfStations))
+        stations = []
+        for site in tree:
+            attribs = dict(site.attrib)
+            attribs.update({'url': siteURL(**attribs)})
+            stations.append(attribs)
+
+        df = pd.DataFrame(stations)
+        if len(df):
+            df.lat = df.lat.astype(float)
+            df.lng = df.lng.astype(float)
+            self.build_stations(df) 
+        else:
+            logging.warning('No stations to be built')
+
     # Creates/updates all NFMDB database
     #
     def update_all(self):

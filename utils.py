@@ -7,7 +7,7 @@ BASE_URLS = {
     'site_data': "https://www.wfas.net/nfmd/public/download_site_data.php?site={}&gacc={}&state={}&grup={}"
 }
 
-_gaccs = ['AICC', 'EACC', 'EGBC', 'NICC', 'NOCC', 'NRCC', 'NRCC', 
+_GACCS = ['AICC', 'EACC', 'EGBC', 'NICC', 'NOCC', 'NRCC', 'NRCC', 
         'NWCC', 'RMCC', 'SACC', 'SOCC', 'SWCC', 'WGBC']
 
 def gaccURL(gacc, **kargs):

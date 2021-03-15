@@ -117,58 +117,66 @@ class FMDB(object):
         df.lng = df.lng.astype(float)
         self.build_stations(df)
     
+    # Creates/updates all NFMDB database
+    #
+    def update_all(self):
+        for gacc in _GACCS:
+            self.update_gacc_stations(gacc=gacc)
+        self.update_data(startYear=1900)
+
     # Creates/updates the datafiles in the FMDB folder
     #
-    # @ Param state - state that you want fuel mositure from
     # @ Param startYear - start year you would like data for
     # @ Param endYear - end year you would like data for
     #       Each year is made into a seperate PKL file
     #       For example: 2000.pkl, 2001.pkl, etc.
     #
-    def update_state_data(self, state="CA", startYear=2000, endYear=int(datetime.datetime.now().year)):
-        if self.updated_dt is None or (datetime.datetime.now()-self.updated_dt).days > 1:
-            self.update_state_stations(state)
-            stationIds = self.sites()
-            nStations = len(stationIds)
-            # Loop to download data and get the needed data
-            for ns,(sid,url) in enumerate(zip(stationIds.index,stationIds['url'])):
-                logging.info('Updating station {}/{}'.format(ns+1,nStations))
-                logging.debug('{}'.format(url))
-                # downloads site data file
-                page = getURL(url)
-                # Read downloaded file for identifying the station
-                # For example: https://www.wfas.net/nfmd/public/download_site_data.php?site=12%20Rd%20@%2054%20Rd&gacc=NOCC&state=CA&grup=Tahoe%20NF
-                # I.E. from above: site = 12 Rd @ 54, gacc = NOCC, etc.
-                try:
-                    df = pd.read_csv(io.StringIO(page.content.decode()),sep="\t")
-                except:
-                    logging.warning('url {} has not data'.format(url))
-                df.columns = [c.lower() for c in df.columns]
-                df = df[["date", "fuel", "percent"]]
-                df['date'] = pd.to_datetime(df.date)
-                df['year'] = df.date.dt.year.astype(int)
-                # Loop to every year in the data
-                for year,group in df.groupby('year'):
-                    if int(year) >= startYear and int(year) <= endYear: 
-                        year_path = osp.join(self.folder_path,"{}.pkl".format(year))
-                        group['site_number'] = sid
-                        if osp.exists(year_path):
-                            df_local = pd.read_pickle(year_path)
-                            group = group[(~group.isin(df_local)[['date', 'fuel', 'percent']]).any(1)]
-                            if len(group):
+    def update_data(self, startYear=2000, endYear=int(datetime.datetime.now().year)):
+        if osp.exists(self.stations_path):
+            if self.updated_dt is None or (datetime.datetime.now()-self.updated_dt).days > 1:
+                stationIds = self.sites()
+                nStations = len(stationIds)
+                # Loop to download data and get the needed data
+                for ns,(sid,url) in enumerate(zip(stationIds.index,stationIds['url'])):
+                    logging.info('Updating station {}/{}'.format(ns+1,nStations))
+                    logging.debug('{}'.format(url))
+                    # downloads site data file
+                    page = getURL(url)
+                    # Read downloaded file for identifying the station
+                    # For example: https://www.wfas.net/nfmd/public/download_site_data.php?site=12%20Rd%20@%2054%20Rd&gacc=NOCC&state=CA&grup=Tahoe%20NF
+                    # I.E. from above: site = 12 Rd @ 54, gacc = NOCC, etc.
+                    try:
+                        df = pd.read_csv(io.StringIO(page.content.decode()),sep="\t")
+                    except:
+                        logging.warning('url {} has not data'.format(url))
+                    df.columns = [c.lower() for c in df.columns]
+                    df = df[["date", "fuel", "percent"]]
+                    df['date'] = pd.to_datetime(df.date)
+                    df['year'] = df.date.dt.year.astype(int)
+                    # Loop to every year in the data
+                    for year,group in df.groupby('year'):
+                        if int(year) >= startYear and int(year) <= endYear: 
+                            year_path = osp.join(self.folder_path,"{}.pkl".format(year))
+                            group['site_number'] = sid
+                            if osp.exists(year_path):
+                                df_local = pd.read_pickle(year_path)
+                                group = group[(~group.isin(df_local)[['date', 'fuel', 'percent']]).any(1)]
+                                if len(group):
+                                    split = split_fuel(group)
+                                    group = pd.concat((group, split),axis=1)
+                                    group = df_local.append(group)
+                                else:
+                                    continue
+                            else:
                                 split = split_fuel(group)
                                 group = pd.concat((group, split),axis=1)
-                                group = df_local.append(group)
-                            else:
-                                continue
-                        else:
-                            split = split_fuel(group)
-                            group = pd.concat((group, split),axis=1)
-                        group.reset_index(drop=True).to_pickle(year_path)
-            self.updated_dt = datetime.datetime.now()
-            self.last_updated = self.updated_dt.strftime("%Y-%m-%d %H:%M:%S")
-            with open(self.last_update_path,'w') as f:
-                f.write(self.last_updated)
+                            group.reset_index(drop=True).to_pickle(year_path)
+                self.updated_dt = datetime.datetime.now()
+                self.last_updated = self.updated_dt.strftime("%Y-%m-%d %H:%M:%S")
+                with open(self.last_update_path,'w') as f:
+                    f.write(self.last_updated)
+        else:
+            logging.error('Before updating the data, update the stations using update_gacc_stations or update_state_stations')
 
     def filter_stations(self, stationID, lat1, lat2, lon1, lon2):
         stationDataFrame = self.sites()
@@ -324,6 +332,6 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     fmdb = FMDB()
     st = time.time()
-    fmdb.update_state_data(state="CA")
+    fmdb.update_all()
     et = time.time()
     logging.info('Elapsed time: {}s'.format(et-st))

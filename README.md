@@ -6,56 +6,39 @@ The goal of this project is to be able to neatly organize the NFMD data into a d
 
 ### Dependencies
 
-* python3
+Python 3 and package modules
+* matplotlib 
+* pandas 
+* requests 
+* lxml
 
-### Installing
+### Installing using Anaconda
 
-* Download FMDB_class.py onto your local machine
+* Clone Github repository
+* Install Anaconda
+* Create environment for running the code:
+    $ conda create -n fmcdb python=3 matplotlib pandas requests lxml
 
-### Executing
+### Create your own Fuel Moisture Database
 
-* Create a new python script
-* import the FMDB_class.py
-
+* Import database class doing:
+```python
+from FMDB import FMDB
 ```
-from FMDB_class import FMDB
-```
-
-* Create a FMDB object.
-
-```
-testDB = FMDB()
-```
-
-* Create a station ID list for the state you would like the data from. 
-* Calling the udate station ID will return a url list with the download links for the data for each station
-* The url list returned will be used by the update database function to get the data
-
-```
-urlList = testDB.update_Station_ID_List("CA")
+* Create an FMDB object doing:
+```python
+db = FMDB()
 ```
 
-* Create the database. 
-* This function is also used to update the database
-
-```
-testDB.update_Data_File(urlList)
+Note: If anything specified, the default is going to be a folder called `FMDB` in the current path tree. One can specify a path where the DB should be created. For instance:
+```python
+db = FMDB('FMDB_CA')
 ```
 
-### Retrieving Data From the Database
-
-* Once the database has been created, you can run the get_data function.
-* The function has a large number of arguements to allow you to get the exact data you want.
-* For each arguement, if you do not provide an input, it will grab everything from that category. For example, if you do not have an input for the stationID arguemnt, it will grab all of the stations. 
-* The function will always return a dataframe with all the data. You can also set makeFile True to create a csv file with all of the data.
-
-```
-#get_Data(startYear=int(datetime.datetime.now().year),endYear=int(datetime.datetime.now().year),stationID=None,fuelType=None,fuelVariation=None,
-#                 latitude1=None,latitude2=None,longitude1=None,longitude2=None,makeFile=False)
-
-coords = [36.93,37.47,-122.43,-121.84]
-testDataframe = testDB.get_Data(2000,2021,None,"Chamise","New",*coords,True)
-```
+### Create/Update the list of stations to consider (from state or GACC).
+### Create/Update local fuel mositure database.
+### Query data into local fuel moisture database.
+### Plot fuel moisture data.
 
 ## Authors
 

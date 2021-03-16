@@ -1,6 +1,6 @@
 # Fuel Mositure Content Database
 
-The goal of this project is to be able to neatly organize [the NFMD data](http://www.wfas.net/nfmd/public/index.php) into a local database and be able to extract the exact data you want from the database.
+The goal of this project is to be able to neatly organize [the NFMD data](http://www.wfas.net/nfmd/public/index.php) into a local database and be able to query and plot easily the exact data requiered by the user from the database.
 
 ## Getting Started
 

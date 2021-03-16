@@ -55,7 +55,7 @@ class FMDB(object):
     #   
     def init_params(self):
         self.params = {'startYear': int(datetime.datetime.now().year), 'endYear': int(datetime.datetime.now().year), 
-                    'stationID': None, 'fuelType': None, 'fuelVariation': None, 
+                    'stationID': None, 'fuelType': None, 'fuelVariation': None, 'fuelCombo': [],
                     'latitude1': None, 'latitude2': None, 'longitude1': None, 'longitude2': None, 'makeFile': False}
     
     # Build site_number to refer to sites in the data
@@ -226,6 +226,7 @@ class FMDB(object):
         stationID = self.params.get('stationID')
         fuelType = self.params.get('fuelType')
         fuelVariation = self.params.get('fuelVariation') 
+        fuelCombo = self.params.get('fuelCombo', []) 
         latitude1 = self.params.get('latitude1')
         latitude2 = self.params.get('latitude2')
         longitude1 = self.params.get('longitude1')
@@ -249,10 +250,17 @@ class FMDB(object):
                 if osp.exists(year_path):
                     yearDataFrame = pd.read_pickle(year_path)
                     fltr = yearDataFrame.site_number.isin(stationIDs)
-                    if fuelType != None:
-                        fltr = np.logical_and(fltr,yearDataFrame.fuel_type.str.lower().isin(fuelTypes))
-                    if fuelVariation != None:
-                        fltr = np.logical_and(fltr,yearDataFrame.fuel_variation.str.lower().isin(fuelVariations))
+                    if len(fuelCombo):
+                        fltr_combos = []
+                        for Type,Variation in fuelCombo:
+                            fltr_combos.append(np.logical_and(yearDataFrame.fuel_type.str.lower() == Type.lower(),
+                                                                yearDataFrame.fuel_variation.str.lower() == Variation.lower()))
+                        fltr = np.logical_and(fltr, np.logical_or(*fltr_combos)) 
+                    else:
+                        if fuelType != None:
+                            fltr = np.logical_and(fltr,yearDataFrame.fuel_type.str.lower().isin(fuelTypes))
+                        if fuelVariation != None:
+                            fltr = np.logical_and(fltr,yearDataFrame.fuel_variation.str.lower().isin(fuelVariations))
                     data = data.append(yearDataFrame[fltr])
                 # If data file does not exist (i.e. you have data files from 2000-2021 but you call 1999)
                 else:

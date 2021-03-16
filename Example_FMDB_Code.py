@@ -100,12 +100,13 @@ db.update_data()
 # will be grabbed (i.e. if fuelType is None, all fuels will be grabbed, or if fuelVariation is None, all variations
 # will be grabbed) 
 #
-# Params = {'startYear': int(datetime.datetime.now().year), 'endYear': int(datetime.datetime.now().year), 
+# db.params = {'startYear': int(datetime.datetime.now().year), 'endYear': int(datetime.datetime.now().year), 
 #                    'stationID': None, 'fuelType': None, 'fuelVariation': None, 
 #                    'latitude1': None, 'latitude2': None, 'longitude1': None, 'longitude2': None, 'makeFile': False}
 #
 # To change these parameters, you can do this:
 #
+db.params['startYear'] = 2000
 ## db.params['stationID'] = 20
 db.params['fuelType'] = 'Chamise'
 ## db.params['makeFile'] = True       # This will save the data you get into a csv if you set this to True.
@@ -126,13 +127,13 @@ allFMDB = db.get_data()
 #
 # Basic line plot for each site/fuelType/fuelVariation
 #
-db.plot_lines(allFMDB)
+## db.plot_lines(allFMDB)
 #
 # Standard deviation plot for each fuelType/fuelVariation. 
 # Mean line is plotted for each month along with its standard deviation for each fuelType/fuelVariation.
 # i.e. lines you will have : [Chamise - Old Growth, Chamise - New Growth, Chamise - None].
 #
-## db.plot_lines_mean(allFMDB)
+db.plot_lines_mean(allFMDB)
 #
 # Bar plot that shows mean and standard devaition values for all the data each year unless monthly paramter 
 # is set to True.

@@ -18,7 +18,7 @@ Python 3 and package modules
 * Install Anaconda
 * Create environment for running the code:
 
-    $ conda create -n fmcdb python=3 matplotlib pandas requests lxml
+      $ conda create -n fmcdb python=3 matplotlib pandas requests lxml
 
 ### Create your own Fuel Moisture Database
 

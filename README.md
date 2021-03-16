@@ -22,7 +22,7 @@ Python 3 and package modules
 
 * Activate the environment
 
-      $ conda activate fmcdb
+      $ conda activate fmcd
 
 ### Create your own Fuel Moisture Database
 
@@ -40,10 +40,10 @@ Note: If anything specified, the default is going to be a folder called `FMDB` i
 db = FMDB('FMDB_CA')
 ```
 
-### Create/Update the list of stations to consider (from state or GACC).
-### Create/Update local fuel mositure database.
-### Query data into local fuel moisture database.
-### Plot fuel moisture data.
+### Create/Update the list of stations to consider (from state or GACC)
+### Create/Update local fuel mositure database
+### Query data into local fuel moisture database
+### Plot fuel moisture data
 
 ## Authors
 

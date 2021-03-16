@@ -13,7 +13,6 @@ import os
 import pandas as pd
 import logging
 import io
-from collections.abc import Iterator
 from lxml import etree
 from utils import _GACCS
 from utils import *
@@ -29,8 +28,8 @@ class FMDB(object):
     #
     # @ Param folder_path - path where this script is located
     #
-    def __init__(self, folder_path=osp.abspath(os.getcwd())):
-        self.folder_path = osp.join(folder_path,"FMDB")
+    def __init__(self, folder_path=osp.join(osp.abspath(os.getcwd()),"FMDB")):
+        self.folder_path = folder_path
         self.exists_here()
         self.stations_path = osp.join(self.folder_path,"stationID.pkl")
         self.last_update_path = osp.join(self.folder_path,"last_update.txt")
@@ -41,6 +40,7 @@ class FMDB(object):
         else:
             self.last_updated = ''
             self.updated_dt = None
+        self.init_params()
     
     # Checks if FMDB directory exists. If not, it is created
     #    
@@ -50,19 +50,29 @@ class FMDB(object):
         else:
             os.makedirs(self.folder_path)
     
+    # Initialize parameters for get_data
+    #   
+    def init_params(self):
+        self.params = {'startYear': int(datetime.datetime.now().year), 'endYear': int(datetime.datetime.now().year), 
+                    'stationID': None, 'fuelType': None, 'fuelVariation': None, 
+                    'latitude1': None, 'latitude2': None, 'longitude1': None, 'longitude2': None, 'makeFile': False}
+    
     # Build site_number to refer to sites in the data
     #   
     def build_stations(self, df):
         if osp.exists(self.stations_path):
             df_local = self.sites()
             lenLocal = len(df_local)
-            df_new = df[(~df.isin(df_local)[['site','gacc','state','grup','lat','lng']]).any(1)]
+            df_new = df[~np.logical_and(df['site'].isin(df_local['site']), 
+                            np.logical_and(df['gacc'].isin(df_local['gacc']),
+                                np.logical_and(df['state'].isin(df_local['state']),
+                                    np.logical_and(df['grup'].isin(df_local['grup']),
+                                        np.logical_and(df['lat'].isin(df_local['lat']),
+                                                        df['lng'].isin(df_local['lng']))))))]
             lenNew = len(df_new)
             df_new.index = range(lenLocal,lenLocal+lenNew)
             df_new.index.name = 'site_number'
             df_local = df_local.append(df_new)
-            df_local.to_pickle(self.stations_path)
-            df_local.to_csv(osp.join(self.folder_path,"stationID.csv"))
         else:
             df_local = df
             df_local.index = range(len(df_local))
@@ -156,6 +166,7 @@ class FMDB(object):
                         df = pd.read_csv(io.StringIO(page.content.decode()),sep="\t")
                     except:
                         logging.warning('url {} has not data'.format(url))
+                        continue
                     df.columns = [c.lower() for c in df.columns]
                     df = df[["date", "fuel", "percent"]]
                     df['date'] = pd.to_datetime(df.date)
@@ -167,7 +178,9 @@ class FMDB(object):
                             group['site_number'] = sid
                             if osp.exists(year_path):
                                 df_local = pd.read_pickle(year_path)
-                                group = group[(~group.isin(df_local)[['date', 'fuel', 'percent']]).any(1)]
+                                group = group[~np.logical_and(group['date'].isin(df_local['date']), 
+                                                np.logical_and(group['fuel'].isin(df_local['fuel']), 
+                                                                group['percent'].isin(df_local['percent'])))]
                                 if len(group):
                                     split = split_fuel(group)
                                     group = pd.concat((group, split),axis=1)
@@ -185,22 +198,46 @@ class FMDB(object):
         else:
             logging.error('Before updating the data, update the stations using update_gacc_stations or update_state_stations')
 
+    # Filter stations ID from stationID and coordinates
+    #
+    # @ Param stationID - list with station IDs or an station ID
+    # @ Param lat1,lat2,lon1,lon2 - graphical coordinates in WGS84 degrees
+    #
     def filter_stations(self, stationID, lat1, lat2, lon1, lon2):
         stationDataFrame = self.sites()
         if stationID is None:
             subset = stationDataFrame
         else:
             subset = stationDataFrame.iloc[stationID]
+        if not len(subset):
+            subset = stationDataFrame
         if any([lat1 is None, lat2 is None, lon1 is None, lon2 is None]):
-            return list(subset.index)
+            try: 
+                return list([subset.name])
+            except:
+                return list(subset.index)
         else:
-            return list(subset[np.logical_and(lat1 < subset.lat, 
-                                                    np.logical_and(lat2 > subset.lat, 
-                                                            np.logical_and(lon1 < subset.lng, 
-                                                                            lon2 > subset.lng)))].index)
+            subset = subset[np.logical_and(lat1 <= subset.lat, 
+                                np.logical_and(lat2 >= subset.lat, 
+                                    np.logical_and(lon1 <= subset.lng, 
+                                                    lon2 >= subset.lng)))]
+            try: 
+                return list([subset.name])
+            except:
+                return list(subset.index)
 
-    def get_data(self, startYear=int(datetime.datetime.now().year), endYear=int(datetime.datetime.now().year), stationID=None, 
-                fuelType=None, fuelVariation=None, latitude1=None, latitude2=None, longitude1=None, longitude2=None, makeFile=False):
+    def get_data(self):
+        startYear = self.params.get('startYear', int(datetime.datetime.now().year)) 
+        endYear = self.params.get('endYear', int(datetime.datetime.now().year))
+        stationID = self.params.get('stationID')
+        fuelType = self.params.get('fuelType')
+        fuelVariation = self.params.get('fuelVariation') 
+        latitude1 = self.params.get('latitude1')
+        latitude2 = self.params.get('latitude2')
+        longitude1 = self.params.get('longitude1')
+        longitude2 = self.params.get('longitude2')
+        makeFile = self.params.get('makeFile', False)
+
         lat1,lat2,lon1,lon2 = check_coords(latitude1, latitude2, longitude1, longitude2)
         stationIDs = self.filter_stations(stationID,lat1,lat2,lon1,lon2)
         logging.debug('stationIDs={}'.format(stationIDs))
@@ -225,7 +262,7 @@ class FMDB(object):
                     data = data.append(yearDataFrame[fltr])
                 # If data file does not exist (i.e. you have data files from 2000-2021 but you call 1999)
                 else:
-                    logging.warning("{} does not exist. Try updating the DB before getting data using update_state_data.".format(year_path))
+                    logging.warning("{} does not exist. Try updating the DB before getting data using update_gacc_data or update_state_data.".format(year_path))
                 startYear += 1
             logging.info('{} records found'.format(len(data)))
             if len(data):
@@ -236,8 +273,8 @@ class FMDB(object):
                 out_path = osp.join(self.folder_path,'data_{:04d}{:02d}{:02d}_{:02d}{:02d}{:02d}.csv'.format(*datetime.datetime.now().timetuple()))
                 data.to_csv(out_path, index=False, date_format='%Y-%m-%d')
         else:   
-            logging.error("{} does not exist. Try updating the stations before getting data using update_state_stations.".format(self.stations_path))
-        return data
+            logging.error("{} does not exist. Try updating the stations before getting data using update_gacc_stations or update_state_stations.".format(self.stations_path))
+        return data.reset_index(drop=True)
 
     @staticmethod
     def plot_lines(dataFrame):
@@ -339,6 +376,8 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     fmdb = FMDB()
     st = time.time()
-    fmdb.update_all()
+    #fmdb.update_all()
+    fmdb.update_state_stations()
+    fmdb.update_data()
     et = time.time()
     logging.info('Elapsed time: {}s'.format(et-st))

@@ -34,7 +34,6 @@ def getURL(url, max_retries=10):
             logging.error('NFMDB is not responding')
         max_retries -= 1
         logging.warning('Reconnecting, {} retries'.format(max_retries))
-        
 
 def split_fuel(df):
     split = df['fuel'].str.split(',', n=1, expand=True)

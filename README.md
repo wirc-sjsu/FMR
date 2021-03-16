@@ -20,6 +20,10 @@ Python 3 and package modules
 
       $ conda create -n fmcdb python=3 matplotlib pandas requests lxml
 
+* Activate the environment
+
+      $ conda activate fmcdb
+
 ### Create your own Fuel Moisture Database
 
 * Import database class doing:

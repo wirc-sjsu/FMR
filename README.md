@@ -47,8 +47,8 @@ Note: Once you have a stationID list from one of the ways listed below, that sta
 There are multiple ways to create/update the stationID list. 
 
 To update the stationID list by a given state, use the function below.
- By changing the state argument, you change which state you are grabbing
- all of the stations from.
+By changing the state argument, you change which state you are grabbing
+all of the stations from.
 '''python
 db.update_state_stations(state="CA")
 '''

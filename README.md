@@ -40,7 +40,7 @@ Note: If anything specified, the default is going to be a folder called `FMDB` i
 db = FMDB('FMDB_CA')
 ```
 
-### Create/Update the list of stations to consider (from state or GACC)
+### Create/Update the list of stations to consider (from State or GACC)
 
 Note: Once you have a stationID list from one of the ways listed below, that stationID list is permanent unless you delete it. So, if you create a stationID list for all the sites in California and then call one of the create/update functions (seen below) for a different state/gacc, those new sites will be added to the existing stationID list.
 
@@ -130,13 +130,12 @@ allFMDB = db.get_data()
 ```
 ### Plot fuel moisture data
 
-There are a couple different plots you can create.
+There are a couple different plots you can create. All the plots have the flag outliers, which is set to False by default. This flag prevents the plot functions to plot fuel moisture content values larger than 400 and smaller than 0. So, it gets rid of the outliers. If the user wants to see the outliers, then this flag can be set to True.
 
 Basic line plot for each site/fuelType/fuelVariation
 ```python
 db.plot_lines(allFMDB)
 ```
-
 By default the plot_lines function will automatically call the get_data function if not dataframe is provided
 in the argument.
 ```python
@@ -149,21 +148,19 @@ i.e. lines you will have : [Chamise - Old Growth, Chamise - New Growth, Chamise 
 ```python
 db.plot_lines_mean(allFMDB)
 ```
-
 By default the plot_lines_mean function will automatically call the get_data function if not dataframe is provided
 in the argument.
 ```python
 db.plot_lines_mean()
 ```
 
-Bar plot that shows mean and standard devaition values for all the data each year unless monthly paramter 
+Bar plot that shows mean and standard deviation values for all the data each year unless monthly parameter 
 is set to True.
 ```python
 db.plot_bars_mean(allFMDB, monthly=False)
 db.plot_bars_mean(allFMDB, monthly=True)
 db.plot_bars_mean(allFMDB, True)
 ```
-
 By default the plot_bars_mean function will automatically call the get_data function if not dataframe is provided
 in the argument.
 ```python

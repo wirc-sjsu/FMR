@@ -115,8 +115,8 @@ db.params = {'startYear': int(datetime.datetime.now().year), 'endYear': int(date
 ```python
 db.params['startYear'] = 2000      # This will start the data from 2000
 db.params['stationID'] = 20        # This will specify data only from station with stationID 20
-db.params['fuelType'] = 'Chamise'  # This will specify ony fuel type 'Chamise'
-db.params['makeFile'] = True       # This will save the data you get into a csv if you set this to True.
+db.params['fuelType'] = 'Chamise'  # This will specify only fuel type 'Chamise'
+db.params['makeFile'] = True       # This will save the data you get into a CSV file
 ```
 Most of the parameters allow for a list of elements to specify more than one element to filter in the database.
 

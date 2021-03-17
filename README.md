@@ -49,32 +49,32 @@ There are multiple ways to create/update the stationID list.
 To update the stationID list by a given state, use the function below.
 By changing the state argument, you change which state you are grabbing
 all of the stations from.
-'''python
+```python
 db.update_state_stations(state="CA")
-'''
+```
  By default this function will grab the site data for California, so you can also
  write the function above as:
- '''python 
+ ```python
  db.update_state_stations()   
- '''
+ ```
  Alternatively you can use the function as seen below if you want a different state.
- '''python
+ ```python
  db.update_state_stations("AZ")
- '''
+ ```
 -------------------------------
  Or you can update the stationID list via a GACC.
-'''python
+```python
  db.update_gacc_stations(gacc="NOCC")
-'''
+```
  By default this function will grab the site data for the NOCC GACC, so you can also
  write the function above as:
- '''python
+ ```python
  db.update_gacc_stations()
- '''
+ ```
  Alternatively you can use the function as seen below.
- '''python
+ ```python
  db.update_gacc_stations("EACC")
- '''
+ ```
 ### Create/Update local fuel mositure database
 ### Query data into local fuel moisture database
 ### Plot fuel moisture data

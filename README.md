@@ -46,36 +46,27 @@ Note: Once you have a stationID list from one of the ways listed below, that sta
 
 There are multiple ways to create/update the stationID list. 
 
-To update the stationID list by a given state, use the function below.
-By changing the state argument, you change which state you are grabbing
-all of the stations from.
+#### By State
+To update the stationID list by a given state, use update_state_stations function. By changing the state argument, you change which state you are grabbing all of the stations from. By default this function will grab the site data for California, so these two calls update the same stations:
 ```python
 db.update_state_stations(state="CA")
+db.update_state_stations() 
 ```
- By default this function will grab the site data for California, so you can also
- write the function above as:
- ```python
- db.update_state_stations()   
- ```
- Alternatively you can use the function as seen below if you want a different state.
- ```python
- db.update_state_stations("AZ")
- ```
--------------------------------
- Or you can update the stationID list via a GACC.
+Alternatively, you can use the function as seen below if you want a different state.
 ```python
- db.update_gacc_stations(gacc="NOCC")
+db.update_state_stations("AZ")
 ```
- By default this function will grab the site data for the NOCC GACC, so you can also
- write the function above as:
- ```python
- db.update_gacc_stations()
- ```
- Alternatively you can use the function as seen below.
- ```python
- db.update_gacc_stations("EACC")
- ```
- -------------------------------
+#### By GACC
+You can also update the stationID list via a GACC. By changing the gacc argument, you change which GACC you are grabbing all of the stations from. By default this function will grab the site data for the NOCC GACC, so these two calls update the same stations:
+```python
+db.update_gacc_stations(gacc="NOCC")
+db.update_gacc_stations()
+```
+Alternatively you can use the function as seen below.
+```python
+db.update_gacc_stations("EACC")
+```
+#### All US stations
 Lastly, you can update all the stations in the United States by the function below.
 ```python
 db.update_all()

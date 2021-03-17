@@ -159,9 +159,9 @@ db.plot_lines_mean()
 Bar plot that shows mean and standard devaition values for all the data each year unless monthly paramter 
 is set to True.
 ```python
-plot_bars_mean(allFMDB, monthly=False)
-plot_bars_mean(allFMDB, monthly=True)
-plot_bars_mean(allFMDB, True)
+db.plot_bars_mean(allFMDB, monthly=False)
+db.plot_bars_mean(allFMDB, monthly=True)
+db.plot_bars_mean(allFMDB, True)
 ```
 
 By default the plot_bars_mean function will automatically call the get_data function if not dataframe is provided

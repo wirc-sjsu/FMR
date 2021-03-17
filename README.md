@@ -105,7 +105,23 @@ Note: for each year you get data from, a respective pickle file will be created 
 
 ### Query data into local fuel moisture database
 
-Default parameters are set for the get_data function as seen below. If left unchanged, it will grab all of the data from the local database. If a parameter is left as None, it means all the data from that parameter will be grabbed (i.e. if fuelType is None, all fuels will be grabbed, or if fuelVariation is None, all variations will be grabbed). The default values are:
+The user can query fuel moisture data from the local database using the set of parameters:
+* **startYear**: Integer number of the start year considering the data from. Default: present year. Example: 2000.
+* **endYear**: Integer number of the end year considering the data to. Default: present year. Example: 2020.
+* **stationID**: Integer number of list of integer numbers representing the site_number associated to each station in the local database. Example: [0,20]. To see the current local stations' information you can do:
+```python
+db.sites()
+```
+* **fuelType**: String or list of strings representing the fuel type that the user wants to specify (case insensitive). Default: None, which considers all the fuel types. Example: ['Sage','Sagebrush'].
+* **fuelVariation**: String or list of strings representing the fuel variation that the user wants to specify (case insensitive). Default: None, which considers all the fuel types. Example: ['Black','California'].
+* **fuelCombo**: List of tuples with a specific combination between fuel type and fuel variation. Default: [], which does not specify any specific fuel combination. Example: [('Sage','Black'),('Sagebrsh','California')]. This is specially useful in the context of the example provided where defining fuelType as ['Sage','Sagebrush'] and fuelVariation as ['Black','California'] return as combinations Sage - Black, Sagebrush - Black, and Sagebrush - California. But maybe we are only interested on Sage - Black and Sagebrush - California. The only way to have that is to select this two specific combinations using fuelCombo.
+* **latitude1**: Float number of the minimum geographical latitude coordinate in WGS84 degrees. Default: None, which did not filter by coordinates. Example: 36.93.
+* **latitude2**: Float number of the maximum geographical latitude coordinate in WGS84 degrees. Default: None, which did not filter by coordinates. Example: 40.75.
+* **longitude1**: Float number of the minimum geographical longitude coordinate in WGS84 degrees. Default: None, which did not filter by coordinates. Example: -122.43.
+* **longitude2**: Float number of the maximum geographical longitude coordinate in WGS84 degrees. Default: None, which did not filter by coordinates. Example: -118.81.
+* **makeFile**: Boolean asserting if create or not a resulting CSV file with the data. Default: False. Example: True. The file is generated in the database path with name depending on time of creation using: data_{year}{month}{day}\_{hours}{minutes}{seconds}.
+
+All the default parameters are set when the class is initialized as:
 ```python
 db.params = {'startYear': int(datetime.datetime.now().year), 'endYear': int(datetime.datetime.now().year), 
                     'stationID': None, 'fuelType': None, 'fuelVariation': None, 
@@ -118,13 +134,11 @@ db.params['stationID'] = 20        # This will specify data only from station wi
 db.params['fuelType'] = 'Chamise'  # This will specify only fuel type 'Chamise'
 db.params['makeFile'] = True       # This will save the data you get into a CSV file
 ```
-Most of the parameters allow for a list of elements to specify more than one element to filter in the database.
-
 Once you have the parameters you want, you can call the get_data function.
 ```python
 allFMDB = db.get_data()
 ```
- If you have the makeFile parameter as True and just want the CSV file:
+ If you have the makeFile parameter as True and just want a CSV file with the data:
 ```python
  db.get_data()
 ```

@@ -264,7 +264,7 @@ class FMDB(object):
                     data = data.append(yearDataFrame[fltr])
                 # If data file does not exist (i.e. you have data files from 2000-2021 but you call 1999)
                 else:
-                    logging.warning("{} does not exist. Try updating the DB before getting data using update_gacc_data or update_state_data.".format(year_path))
+                    logging.warning("{} does not exist. Try updating the DB before getting data using update_all or update_data.".format(year_path))
                 startYear += 1
             logging.info('{} records found'.format(len(data)))
             if len(data):

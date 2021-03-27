@@ -260,7 +260,7 @@ class FMDB(object):
                         if fuelType != None:
                             fltr = np.logical_and(fltr,yearDataFrame.fuel_type.str.lower().isin(fuelTypes))
                         if fuelVariation != None:
-                            fltr = np.logical_and(fltr,yearDataFrame.fuel_variation.str.lower().isin(fuelVariations))
+                            fltr = np.logical_and(fltr,yearDataFrame.fuel_variation.str.lower().str.contains('|'.join(fuelVariations),na=False))
                     data = data.append(yearDataFrame[fltr])
                 # If data file does not exist (i.e. you have data files from 2000-2021 but you call 1999)
                 else:

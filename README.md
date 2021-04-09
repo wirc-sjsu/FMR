@@ -22,7 +22,7 @@ Python 3 and package modules
 
 * Activate the environment
 
-      $ conda activate fmcd
+      $ conda activate fmcdb
 
 ### Create your own Fuel Moisture Database
 

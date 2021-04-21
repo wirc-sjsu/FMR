@@ -394,6 +394,27 @@ class FMDB(object):
         plt.xticks(rotation = 45)
         plt.show()
 
+    # Bar plot that shows count for the different fuel types.
+    #
+    # @ Param dataFrame - pandas dataframe with the data to plot from get_data
+    # @ Param outliers - boolean to include or not the outliers (points outside of [0,400] range)
+    #
+    def plot_bars_count(self, dataFrame=None, outliers=False):
+        if dataFrame is None:
+            dataFrame = self.get_data()
+        if not outliers:
+            dataFrame = filter_outliers(dataFrame)
+        dataFrame['fuel_type'] = dataFrame['fuel_type'].fillna('None').str.lower()
+        dataFrame['fuel_variation'] = dataFrame['fuel_variation'].fillna('None').str.lower()
+        dataFrame = dataFrame.groupby('fuel_type').count()['percent'].sort_values(ascending=False)
+        fig, ax = plt.subplots()
+        plt.bar(dataFrame.index,dataFrame)
+        ax.set_ylabel("Number of Observations", fontsize = 12)
+        ax.set_xlabel("Fuel Type", fontsize = 12)
+        ax.tick_params(axis='both', length = 10, width = 1, labelsize=8)
+        plt.xticks(rotation = 90)
+        plt.show()
+
     # Return DataFrame with the local stations information 
     #
     def sites(self):

@@ -4,9 +4,9 @@ import numpy as np
 
 # Base URLs from NFMDB website
 BASE_URLS = {
-    'gacc_sites': "https://www.wfas.net/nfmd/ajax/gacc_map_site_xml.php?gacc={}",
-    'state_sites': "https://www.wfas.net/nfmd/ajax/states_map_site_xml.php?state={}",
-    'site_data': "https://www.wfas.net/nfmd/public/download_site_data.php?site={}&gacc={}&state={}&grup={}"
+    'gacc_sites': "http://www.wfas.net/nfmd/ajax/gacc_map_site_xml.php?gacc={}",
+    'state_sites': "http://www.wfas.net/nfmd/ajax/states_map_site_xml.php?state={}",
+    'site_data': "http://www.wfas.net/nfmd/public/download_site_data.php?site={}&gacc={}&state={}&grup={}"
 }
 
 # All available GACCs in NFMDB website

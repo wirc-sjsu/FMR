@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os.path as osp
 import os
+import sys
 import pandas as pd
 import logging
 import io
@@ -98,21 +99,24 @@ class FMDB(object):
         url = gaccURL(gacc)
         # read page
         page = getURL(url)
-        # Find the total number of stations 
-        tree = etree.fromstring(page.content)
-        stations = []
-        for site in tree:
-            attribs = dict(site.attrib)
-            attribs.update({'url': siteURL(**attribs)})
-            stations.append(attribs)
+        if page:
+            # Find the total number of stations 
+            tree = etree.fromstring(page.content)
+            stations = []
+            for site in tree:
+                attribs = dict(site.attrib)
+                attribs.update({'url': siteURL(**attribs)})
+                stations.append(attribs)
 
-        df = pd.DataFrame(stations)
-        if len(df):
-            df.lat = df.lat.astype(float)
-            df.lng = df.lng.astype(float)
-            self.build_stations(df)
+            df = pd.DataFrame(stations)
+            if len(df):
+                df.lat = df.lat.astype(float)
+                df.lng = df.lng.astype(float)
+                self.build_stations(df)
+            else:
+                logging.warning('FMDB.update_gacc_stations - no stations to be built')
         else:
-            logging.warning('No stations to be built')
+            logging.warning('FMDB.update_gacc_stations - page did not respond')
 
     # Updates the site_number from the list of existent sites
     #
@@ -123,21 +127,24 @@ class FMDB(object):
         url = stateURL(state)
         # read page
         page = getURL(url)
-        # Find the total number of stations 
-        tree = etree.fromstring(page.content)
-        stations = []
-        for site in tree:
-            attribs = dict(site.attrib)
-            attribs.update({'url': siteURL(**attribs)})
-            stations.append(attribs)
+        if page:
+            # Find the total number of stations 
+            tree = etree.fromstring(page.content)
+            stations = []
+            for site in tree:
+                attribs = dict(site.attrib)
+                attribs.update({'url': siteURL(**attribs)})
+                stations.append(attribs)
 
-        df = pd.DataFrame(stations)
-        if len(df):
-            df.lat = df.lat.astype(float)
-            df.lng = df.lng.astype(float)
-            self.build_stations(df) 
+            df = pd.DataFrame(stations)
+            if len(df):
+                df.lat = df.lat.astype(float)
+                df.lng = df.lng.astype(float)
+                self.build_stations(df) 
+            else:
+                logging.warning('FMDB.update_gacc_stations - no stations to be built')
         else:
-            logging.warning('No stations to be built')
+            logging.warning('FMDB.update_gacc_stations - page did not respond')
 
     # Creates/updates all NFMDB database (stations and data)
     #
@@ -160,39 +167,42 @@ class FMDB(object):
                 nStations = len(stationIds)
                 # Loop to download data and get the needed data
                 for ns,(sid,url) in enumerate(zip(stationIds.index,stationIds['url'])):
-                    logging.info('Updating station {}/{}'.format(ns+1,nStations))
+                    logging.info('FMDB.update_data - updating station {}/{}'.format(ns+1,nStations))
                     logging.debug('{}'.format(url))
                     # downloads site data file
                     page = getURL(url)
-                    # Read downloaded file for identifying the station
-                    # For example: https://www.wfas.net/nfmd/public/download_site_data.php?site=12%20Rd%20@%2054%20Rd&gacc=NOCC&state=CA&grup=Tahoe%20NF
-                    # I.E. from above: site = 12 Rd @ 54, gacc = NOCC, etc.
-                    try:
-                        df = pd.read_csv(io.StringIO(page.content.decode()),sep="\t")
-                    except:
-                        logging.warning('url {} has not data'.format(url))
-                        continue
-                    df.columns = [c.lower() for c in df.columns]
-                    df = df[["date", "fuel", "percent"]]
-                    df.loc[:,'date'] = pd.to_datetime(df.loc[:,'date'])
-                    df.loc[:,'year'] = df.date.dt.year.astype(int)
-                    # Loop to every year in the data
-                    for year,group in df.groupby('year'):
-                        if int(year) >= startYear and int(year) <= endYear: 
-                            year_path = osp.join(self.folder_path,"{}.pkl".format(year))
-                            group['site_number'] = sid
-                            split = split_fuel(group)
-                            group = pd.concat((group, split),axis=1)
-                            if osp.exists(year_path):
-                                df_local = pd.read_pickle(year_path)
-                                group = pd.concat([df_local, group]).drop_duplicates(subset=['date','fuel','percent','site_number'],keep="first")
-                            group.reset_index(drop=True).to_pickle(year_path)
+                    if page:
+                        # Read downloaded file for identifying the station
+                        # For example: https://www.wfas.net/nfmd/public/download_site_data.php?site=12%20Rd%20@%2054%20Rd&gacc=NOCC&state=CA&grup=Tahoe%20NF
+                        # I.E. from above: site = 12 Rd @ 54, gacc = NOCC, etc.
+                        try:
+                            df = pd.read_csv(io.StringIO(page.content.decode()),sep="\t")
+                        except:
+                            logging.warning('FMDB.update_data - url {} has not data'.format(url))
+                            continue
+                        df.columns = [c.lower() for c in df.columns]
+                        df = df[["date", "fuel", "percent"]]
+                        df.loc[:,'date'] = pd.to_datetime(df.loc[:,'date'])
+                        df.loc[:,'year'] = df.date.dt.year.astype(int)
+                        # Loop to every year in the data
+                        for year,group in df.groupby('year'):
+                            if int(year) >= startYear and int(year) <= endYear: 
+                                year_path = osp.join(self.folder_path,"{}.pkl".format(year))
+                                group['site_number'] = sid
+                                split = split_fuel(group)
+                                group = pd.concat((group, split),axis=1)
+                                if osp.exists(year_path):
+                                    df_local = pd.read_pickle(year_path)
+                                    group = pd.concat([df_local, group]).drop_duplicates(subset=['date','fuel','percent','site_number'],keep="first")
+                                group.reset_index(drop=True).to_pickle(year_path)
+                    else:
+                        logging.error('FMDB.update_data - page did not respond')
                 self.updated_dt = datetime.datetime.now()
                 self.last_updated = self.updated_dt.strftime("%Y-%m-%d %H:%M:%S")
                 with open(self.last_update_path,'w') as f:
                     f.write(self.last_updated)
         else:
-            logging.error('Before updating the data, update the stations using update_gacc_stations or update_state_stations')
+            logging.error('FMDB.update_data - before updating the data, update the stations using update_gacc_stations or update_state_stations')
 
     # Filter stations ID from stationID and coordinates
     #
@@ -430,7 +440,13 @@ class FMDB(object):
 if __name__ == '__main__':
     import time
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    fmdb = FMDB()
+    if len(sys.argv) == 1:
+        fmdb = FMDB()
+    elif len(sys.argv) == 2:
+        fmdb = FMDB(sys.argv[1])
+    else:
+        print('Usage: {} [path_to_FMDB]'.format(sys.argv[0])) 
+        sys.exit(1)
     st = time.time()
     fmdb.update_all()
     et = time.time()

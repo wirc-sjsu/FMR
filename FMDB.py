@@ -155,7 +155,7 @@ class FMDB(object):
     #
     def update_data(self, startYear=2000, endYear=int(datetime.datetime.now().year)):
         if osp.exists(self.stations_path):
-            if self.updated_dt is None or (datetime.datetime.now()-self.updated_dt).days >= 1 or self.new_stations:
+            if self.updated_dt is None or (datetime.datetime.now()-self.updated_dt).total_seconds()/3600. >= 1 or self.new_stations:
                 stationIds = self.sites()
                 nStations = len(stationIds)
                 # Loop to download data and get the needed data

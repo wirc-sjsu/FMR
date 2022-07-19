@@ -5,16 +5,16 @@ Created on Wed Feb  3 10:11:53 2021
 @author: jackr
 """
 import datetime
+import io
+import logging
+from lxml import etree
 import matplotlib.dates as md
 import matplotlib.pyplot as plt
 import numpy as np
 import os.path as osp
 import os
-import sys
 import pandas as pd
-import logging
-import io
-from lxml import etree
+from plotting import *
 try:
     from .utils import _GACCS
     from .utils import *
@@ -61,7 +61,8 @@ class FMDB(object):
     def init_params(self):
         self.params = {'startYear': int(datetime.datetime.now().year), 'endYear': int(datetime.datetime.now().year), 
                     'stationID': None, 'fuelType': None, 'fuelVariation': None, 'fuelCombo': [],
-                    'latitude1': None, 'latitude2': None, 'longitude1': None, 'longitude2': None, 'makeFile': False}
+                    'latitude1': None, 'latitude2': None, 'longitude1': None, 'longitude2': None, 'state': None, 
+                    'makeFile': False}
     
     # Build site_number to refer to sites in the data
     #   
@@ -99,24 +100,21 @@ class FMDB(object):
         url = gaccURL(gacc)
         # read page
         page = getURL(url)
-        if page:
-            # Find the total number of stations 
-            tree = etree.fromstring(page.content)
-            stations = []
-            for site in tree:
-                attribs = dict(site.attrib)
-                attribs.update({'url': siteURL(**attribs)})
-                stations.append(attribs)
+        # Find the total number of stations 
+        tree = etree.fromstring(page.content)
+        stations = []
+        for site in tree:
+            attribs = dict(site.attrib)
+            attribs.update({'url': siteURL(**attribs)})
+            stations.append(attribs)
 
-            df = pd.DataFrame(stations)
-            if len(df):
-                df.lat = df.lat.astype(float)
-                df.lng = df.lng.astype(float)
-                self.build_stations(df)
-            else:
-                logging.warning('FMDB.update_gacc_stations - no stations to be built')
+        df = pd.DataFrame(stations)
+        if len(df):
+            df.lat = df.lat.astype(float)
+            df.lng = df.lng.astype(float)
+            self.build_stations(df)
         else:
-            logging.warning('FMDB.update_gacc_stations - page did not respond')
+            logging.warning('No stations to be built')
 
     # Updates the site_number from the list of existent sites
     #
@@ -127,24 +125,21 @@ class FMDB(object):
         url = stateURL(state)
         # read page
         page = getURL(url)
-        if page:
-            # Find the total number of stations 
-            tree = etree.fromstring(page.content)
-            stations = []
-            for site in tree:
-                attribs = dict(site.attrib)
-                attribs.update({'url': siteURL(**attribs)})
-                stations.append(attribs)
+        # Find the total number of stations 
+        tree = etree.fromstring(page.content)
+        stations = []
+        for site in tree:
+            attribs = dict(site.attrib)
+            attribs.update({'url': siteURL(**attribs)})
+            stations.append(attribs)
 
-            df = pd.DataFrame(stations)
-            if len(df):
-                df.lat = df.lat.astype(float)
-                df.lng = df.lng.astype(float)
-                self.build_stations(df) 
-            else:
-                logging.warning('FMDB.update_gacc_stations - no stations to be built')
+        df = pd.DataFrame(stations)
+        if len(df):
+            df.lat = df.lat.astype(float)
+            df.lng = df.lng.astype(float)
+            self.build_stations(df) 
         else:
-            logging.warning('FMDB.update_gacc_stations - page did not respond')
+            logging.warning('No stations to be built')
 
     # Creates/updates all NFMDB database (stations and data)
     #
@@ -162,59 +157,85 @@ class FMDB(object):
     #
     def update_data(self, startYear=2000, endYear=int(datetime.datetime.now().year)):
         if osp.exists(self.stations_path):
-            if self.updated_dt is None or (datetime.datetime.now()-self.updated_dt).total_seconds()/3600. >= 1 or self.new_stations:
+            if self.updated_dt is None or (datetime.datetime.now()-self.updated_dt).days > 1 or self.new_stations:
                 stationIds = self.sites()
                 nStations = len(stationIds)
                 # Loop to download data and get the needed data
                 for ns,(sid,url) in enumerate(zip(stationIds.index,stationIds['url'])):
-                    logging.info('FMDB.update_data - updating station {}/{}'.format(ns+1,nStations))
+                    logging.info('Updating station {}/{}'.format(ns+1,nStations))
                     logging.debug('{}'.format(url))
                     # downloads site data file
                     page = getURL(url)
-                    if page:
-                        # Read downloaded file for identifying the station
-                        # For example: https://www.wfas.net/nfmd/public/download_site_data.php?site=12%20Rd%20@%2054%20Rd&gacc=NOCC&state=CA&grup=Tahoe%20NF
-                        # I.E. from above: site = 12 Rd @ 54, gacc = NOCC, etc.
-                        try:
-                            df = pd.read_csv(io.StringIO(page.content.decode()),sep="\t")
-                        except:
-                            logging.warning('FMDB.update_data - url {} has not data'.format(url))
-                            continue
-                        df.columns = [c.lower() for c in df.columns]
-                        df = df[["date", "fuel", "percent"]]
-                        df.loc[:,'date'] = pd.to_datetime(df.loc[:,'date'])
-                        df.loc[:,'year'] = df.date.dt.year.astype(int)
-                        # Loop to every year in the data
-                        for year,group in df.groupby('year'):
-                            if int(year) >= startYear and int(year) <= endYear: 
-                                year_path = osp.join(self.folder_path,"{}.pkl".format(year))
-                                group['site_number'] = sid
-                                split = split_fuel(group)
-                                group = pd.concat((group, split),axis=1)
-                                if osp.exists(year_path):
-                                    df_local = pd.read_pickle(year_path)
-                                    group = pd.concat([df_local, group]).drop_duplicates(subset=['date','fuel','percent','site_number'],keep="first")
-                                group.reset_index(drop=True).to_pickle(year_path)
-                    else:
-                        logging.error('FMDB.update_data - page did not respond')
+                    # Read downloaded file for identifying the station
+                    # For example: https://www.wfas.net/nfmd/public/download_site_data.php?site=12%20Rd%20@%2054%20Rd&gacc=NOCC&state=CA&grup=Tahoe%20NF
+                    # I.E. from above: site = 12 Rd @ 54, gacc = NOCC, etc.
+                    try:
+                        df = pd.read_csv(io.StringIO(page.content.decode()),sep="\t")
+                    except:
+                        logging.warning('url {} has not data'.format(url))
+                        continue
+                    df.columns = [c.lower() for c in df.columns]
+                    df = df[["date", "state", "fuel", "percent"]]
+                    df.loc[:,'date'] = pd.to_datetime(df.loc[:,'date'])
+                    df.loc[:,'year'] = df.date.dt.year.astype(int)
+                    # Loop to every year in the data
+                    for year,group in df.groupby('year'):
+                        if int(year) >= startYear and int(year) <= endYear: 
+                            year_path = osp.join(self.folder_path,"{}.pkl".format(year))
+                            group['site_number'] = sid
+                            split = split_fuel(group)
+                            group = pd.concat((group, split),axis=1)
+                            if osp.exists(year_path):
+                                df_local = pd.read_pickle(year_path)
+                                group = pd.concat([df_local, group]).drop_duplicates(subset=['date', 'state', 'fuel','percent','site_number'],keep="first")
+                            group.reset_index(drop=True).to_pickle(year_path)
                 self.updated_dt = datetime.datetime.now()
                 self.last_updated = self.updated_dt.strftime("%Y-%m-%d %H:%M:%S")
                 with open(self.last_update_path,'w') as f:
                     f.write(self.last_updated)
         else:
-            logging.error('FMDB.update_data - before updating the data, update the stations using update_gacc_stations or update_state_stations')
+            logging.error('Before updating the data, update the stations using update_gacc_stations or update_state_stations')
 
     # Filter stations ID from stationID and coordinates
     #
     # @ Param stationID - list with station IDs or an station ID
     # @ Param lat1,lat2,lon1,lon2 - geographical coordinates in WGS84 degrees
     #
-    def filter_stations(self, stationID, lat1, lat2, lon1, lon2):
+    def filter_stations(self, stationID, state, lat1, lat2, lon1, lon2):
         stationDataFrame = self.sites()
+        if state is not None:
+            try:
+                if isinstance(state,str):
+                    stationDataFrame = stationDataFrame.loc[stationDataFrame.state.str.lower() == state.lower()]
+                else:
+                    stationDataFrame = stationDataFrame.loc[stationDataFrame.state.isin(state)]
+            except:
+                pass
         if stationID is None:
             subset = stationDataFrame
         else:
-            subset = stationDataFrame.iloc[stationID]
+            #temp = stationDataFrame[stationDataFrame.site_number == 238]
+            #print(temp)
+            #print("")
+            try:
+                #subset = stationDataFrame.iloc[stationID]
+                #print("here")
+                #print("")
+                #print(subset)
+                #print("")
+                #print("a1")
+                #print(stationDataFrame.columns)
+                #print(stationDataFrame.site)
+                #print(stationDataFrame.site[238])
+                #print(stationDataFrame.site[239])
+                #print(stationDataFrame.type)
+                #print("")
+                subset = stationDataFrame[stationDataFrame.site.index == stationID]
+                #subset2 = subset2.iloc[stationID]
+                #print(subset2)
+                #print("done")
+            except:
+                subset = stationDataFrame
         if not len(subset):
             subset = stationDataFrame
         if any([lat1 is None, lat2 is None, lon1 is None, lon2 is None]):
@@ -245,10 +266,12 @@ class FMDB(object):
         latitude2 = self.params.get('latitude2')
         longitude1 = self.params.get('longitude1')
         longitude2 = self.params.get('longitude2')
+        state = self.params.get('state')
+        #print(state)
         makeFile = self.params.get('makeFile', False)
-
+        
         lat1,lat2,lon1,lon2 = check_coords(latitude1, latitude2, longitude1, longitude2)
-        stationIDs = self.filter_stations(stationID,lat1,lat2,lon1,lon2)
+        stationIDs = self.filter_stations(stationID,state,lat1,lat2,lon1,lon2)
         logging.debug('stationIDs={}'.format(stationIDs))
         if fuelType != None:
             fuelTypes = [str(ft).lower() for ft in fuelType] if isinstance(fuelType,(list,tuple,np.ndarray)) else [str(fuelType).lower()]
@@ -282,152 +305,17 @@ class FMDB(object):
                 startYear += 1
             logging.info('{} records found'.format(len(data)))
             if len(data):
-                data = data[['site_number','date','fuel_type','fuel_variation','percent']]
+                data = data[['site_number','date', 'state','fuel_type','fuel_variation','percent']]
                 data = data.sort_values(by=list(data.columns))
             if makeFile:
+                sites = self.sites()
+                data = data.join(sites[["site","lat","lng"]], on="site_number")
                 # use currentDateTime.csv (to seconds 20200309_0209+seconds.csv)
                 out_path = osp.join(self.folder_path,'data_{:04d}{:02d}{:02d}_{:02d}{:02d}{:02d}.csv'.format(*datetime.datetime.now().timetuple()))
                 data.to_csv(out_path, index=False, date_format='%Y-%m-%d')
         else:   
             logging.error("{} does not exist. Try updating the stations before getting data using update_gacc_stations or update_state_stations.".format(self.stations_path))
         return data.reset_index(drop=True)
-    
-    # Basic line plot for each site/fuelType/fuelVariation
-    #
-    # @ Param dataFrame - pandas dataframe with the data to plot from get_data
-    # @ Param outliers - boolean to include or not the outliers (points outside of [0,400] range)
-    #
-    def plot_lines(self, dataFrame=None, outliers=False):
-        if dataFrame is None:
-            dataFrame = self.get_data()
-        if not outliers:
-            dataFrame = filter_outliers(dataFrame)
-        dataFrame['fuel_type'] = dataFrame['fuel_type'].fillna('None').str.lower()
-        dataFrame['fuel_variation'] = dataFrame['fuel_variation'].fillna('None').str.lower()
-        df = dataFrame.groupby(['site_number','fuel_type','fuel_variation','date']).mean()
-        mids = df.index
-        # Dropping one level from multi index (date) and find all the unique combinations of the other levels
-        combos = mids.droplevel('date').unique()
-        if len(combos) < 50:
-            fig, ax = plt.subplots()
-            legend = []
-            for combo in combos:
-                x = pd.to_datetime(df.loc[combo,:].index)
-                y = df.loc[combo,:].values
-                ax.plot(x,y,'.-')
-                legend.append('{} - {} - {}'.format(*combo))
-            ax.set_ylabel("Fuel Mositure (%)", fontsize = 15)
-            ax.set_xlabel("Time", fontsize = 20)
-            ax.tick_params(axis='both', length = 10, width = 1, labelsize=13)
-            ax.xaxis.set_major_locator(md.YearLocator())
-            ax.xaxis.set_minor_locator(md.MonthLocator(bymonth=[7]))
-            ax.xaxis.set_major_formatter(md.DateFormatter("\n%Y"))
-            ax.xaxis.set_minor_formatter(md.DateFormatter("%b"))
-            plt.grid(True)
-            plt.legend(legend,loc='upper left')
-            plt.xticks(rotation = 45)
-            plt.show()
-        else:
-            logging.error('Too many plots. Consider filtering data using get_data parameters.')
-    
-    # Standard deviation plot for each fuelType/fuelVariation (averaging all sites)
-    #
-    # @ Param dataFrame - pandas dataframe with the data to plot from get_data
-    # @ Param outliers - boolean to include or not the outliers (points outside of [0,400] range)
-    #
-    def plot_lines_mean(self, dataFrame=None, outliers=False):
-        if dataFrame is None:
-            dataFrame = self.get_data()
-        if not outliers:
-            dataFrame = filter_outliers(dataFrame)
-        dataFrame['fuel_type'] = dataFrame['fuel_type'].fillna('None').str.lower()
-        dataFrame['fuel_variation'] = dataFrame['fuel_variation'].fillna('None').str.lower()
-        df = dataFrame.groupby(['fuel_type','fuel_variation',dataFrame.date.dt.year, dataFrame.date.dt.month]).agg(['mean','std'])
-        df.index.names = ['fuel_type','fuel_variation','year','month']
-        mid = df.index
-        year_combos = mid.droplevel('month').unique()
-        combos = year_combos.droplevel('year').unique()
-        fig, ax = plt.subplots()
-        legend = []
-        for combo in combos:
-            combo_data = df.loc[combo,'percent']
-            dates = pd.to_datetime(['{:04d}-{:02d}'.format(y,m) for y,m in df.loc[combo].index.to_numpy()])
-            means = combo_data.values[:,0]
-            stds = combo_data.values[:,1]
-            ax.plot(dates, means, '.-')
-            ax.fill_between(dates, means - stds, means + stds, alpha=0.2)
-            legend.append('{} - {}'.format(*combo))
-        ax.set_ylabel("Fuel Mositure (%)", fontsize = 15)
-        ax.set_xlabel("Time", fontsize = 20)
-        ax.tick_params(axis='both', length = 10, width = 1, labelsize=13)
-        ax.xaxis.set_major_locator(md.YearLocator())
-        ax.xaxis.set_minor_locator(md.MonthLocator(bymonth=[7]))
-        ax.xaxis.set_major_formatter(md.DateFormatter("\n%Y"))
-        ax.xaxis.set_minor_formatter(md.DateFormatter("%b"))
-        plt.grid(True)
-        plt.legend(legend,loc='upper left')
-        plt.xticks(rotation = 45)
-        plt.show()
-    
-    # Bar plot that shows mean and standard devaition values for all the data each year unless monthly paramter is set to True.
-    #
-    # @ Param dataFrame - pandas dataframe with the data to plot from get_data
-    # @ Param monthly - boolean to do yearly or monthly bars
-    # @ Param outliers - boolean to include or not the outliers (points outside of [0,400] range)
-    #
-    def plot_bars_mean(self, dataFrame=None, monthly=False, outliers=False):
-        if dataFrame is None:
-            dataFrame = self.get_data()
-        if not outliers:
-            dataFrame = filter_outliers(dataFrame)
-        dataFrame['fuel_type'] = dataFrame['fuel_type'].fillna('None').str.lower()
-        dataFrame['fuel_variation'] = dataFrame['fuel_variation'].fillna('None').str.lower()
-        if monthly:
-            df = dataFrame.groupby([dataFrame.date.dt.year,dataFrame.date.dt.month]).agg(['mean','std'])
-            df.index.names = ['year','month']
-            dates = pd.to_datetime(['{:04d}-{:02d}'.format(y,m) for y,m in df.index.to_numpy()])
-            width = len(dates)*.1
-        else:
-            df = dataFrame.groupby([dataFrame.date.dt.year],dropna=False).agg(['mean','std'])
-            df.index.names = ['year']
-            dates = pd.to_datetime(['{:04d}-01'.format(y) for y in df.index.to_numpy()])
-            width = len(dates)*52*.2
-        means = df['percent']['mean']
-        stds = df['percent']['std']
-        fig, ax = plt.subplots()
-        plt.bar(dates,means,width=width,alpha=.5)
-        plt.bar(dates,stds,width=width,alpha=.5)
-        ax.set_ylabel("Fuel Mositure (%)", fontsize = 15)
-        ax.set_xlabel("Time", fontsize = 20)
-        ax.tick_params(axis='both', length = 10, width = 1, labelsize=13)
-        ax.xaxis.set_major_locator(md.YearLocator())
-        ax.xaxis.set_minor_locator(md.MonthLocator(bymonth=[7]))
-        ax.xaxis.set_major_formatter(md.DateFormatter("\n%Y"))
-        ax.xaxis.set_minor_formatter(md.DateFormatter("%b"))
-        plt.legend(['Mean','Std'],loc='upper left')
-        plt.xticks(rotation = 45)
-        plt.show()
-
-    # Bar plot that shows count for the different fuel types.
-    #
-    # @ Param dataFrame - pandas dataframe with the data to plot from get_data
-    # @ Param outliers - boolean to include or not the outliers (points outside of [0,400] range)
-    #
-    def plot_bars_count(self, dataFrame=None, outliers=False):
-        if dataFrame is None:
-            dataFrame = self.get_data()
-        if not outliers:
-            dataFrame = filter_outliers(dataFrame)
-        dataFrame['fuel_type'] = dataFrame['fuel_type'].fillna('None').str.lower()
-        dataFrame['fuel_variation'] = dataFrame['fuel_variation'].fillna('None').str.lower()
-        dataFrame = dataFrame.groupby('fuel_type').count()['percent'].sort_values(ascending=False)
-        fig, ax = plt.subplots()
-        plt.bar(dataFrame.index,dataFrame)
-        ax.set_ylabel("Number of Observations", fontsize = 12)
-        ax.set_xlabel("Fuel Type", fontsize = 12)
-        ax.tick_params(axis='both', length = 10, width = 1, labelsize=8)
-        plt.xticks(rotation = 90)
-        plt.show()
 
     # Return DataFrame with the local stations information 
     #
@@ -440,14 +328,36 @@ class FMDB(object):
 if __name__ == '__main__':
     import time
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    if len(sys.argv) == 1:
-        fmdb = FMDB()
-    elif len(sys.argv) == 2:
-        fmdb = FMDB(sys.argv[1])
-    else:
-        print('Usage: {} [path_to_FMDB]'.format(sys.argv[0])) 
-        sys.exit(1)
+    fmdb = FMDB()
     st = time.time()
-    fmdb.update_all()
+    #fmdb.update_all()
+    siteNames = fmdb.sites()
+    fmdb.params['startYear'] = 2000
+    fmdb.params['endYear'] = 2022
+    fmdb.params['stationID'] = 255
+    fmdb.params['fuelType'] = 'Chamise'
+    fmdb.params['fuelVariation'] = 'New Growth'
+    fmdb.params['makeFile'] = False
+    fmdb.params['state'] = "CA"
+    allFMDB = fmdb.get_data()
+    #fmdb.update_state_stations("CA")
+    #fmdb.update_data()
+    #plot_yearly_obs(allFMDB)
+    #plot_biweekly_avg_max(allFMDB,siteNames.site[allFMDB.site_number.unique()[0]])
+    #plot_biweekly_avg_std(allFMDB,siteNames.site[allFMDB.site_number.unique()[0]])
+    #plot_monthly_avg_percentile(allFMDB,siteNames.site[allFMDB.site_number.unique()[0]])
+    plot_biweekly_percentile(allFMDB,siteNames.site[allFMDB.site_number.unique()[0]])
+    #plot_lines_mean(allFMDB)
+    #plot_lines(allFMDB)
+    #plot_bars_mean(allFMDB)
+    #plot_violin(allFMDB,siteNames,fmdb.params["stationID"])
+    #plot_fisk(allFMDB,siteNames,fmdb.params["stationID"])
+    
+    #plt.boxplot(allFMDB.percent)
+    #plt.violinplot(allFMDB.percent,
+    #               showmeans=True,
+    #               showmedians=False)
+    
+    #fuel_types(allFMDB)
     et = time.time()
     logging.info('Elapsed time: {}s'.format(et-st))

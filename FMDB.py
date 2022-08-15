@@ -192,8 +192,12 @@ class FMDB(object):
                                 split = split_fuel(group)
                                 group = pd.concat((group, split),axis=1)
                                 if osp.exists(year_path):
-                                    df_local = pd.read_pickle(year_path)
-                                    group = pd.concat([df_local, group]).drop_duplicates(subset=['date','fuel','percent','site_number'],keep="first")
+                                    try:
+                                        df_local = pd.read_pickle(year_path)
+                                    except Exception as e:
+                                        logging.warning('error when reading file {} with exception {}'.format(year_path, e))
+                                    else:
+                                        group = pd.concat([df_local, group]).drop_duplicates(subset=['date','fuel','percent','site_number'],keep="first")
                                 group.reset_index(drop=True).to_pickle(year_path)
                     else:
                         logging.error('FMDB.update_data - page did not respond')
@@ -262,7 +266,11 @@ class FMDB(object):
                 logging.info("Getting data from {}".format(startYear))
                 year_path = osp.join(self.folder_path,"{}.pkl".format(startYear))
                 if osp.exists(year_path):
-                    yearDataFrame = pd.read_pickle(year_path)
+                    try:
+                        yearDataFrame = pd.read_pickle(year_path)
+                    except Exception as e:
+                        logging.warning('error when reading file {} with exception {}'.format(year_path, e))
+                        continue
                     fltr = yearDataFrame.site_number.isin(stationIDs)
                     if len(fuelCombo):
                         fltr_combos = []

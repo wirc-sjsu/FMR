@@ -14,7 +14,7 @@ import numpy as np
 import os.path as osp
 import os
 import pandas as pd
-from plotting import *
+import plotting as fmplt
 try:
     from .utils import _GACCS
     from .utils import *
@@ -199,6 +199,7 @@ class FMDB(object):
     # Filter stations ID from stationID and coordinates
     #
     # @ Param stationID - list with station IDs or an station ID
+    # @ Param state - single state indicated by two letter representation (e.g., CA, TX, NY, etc.)
     # @ Param lat1,lat2,lon1,lon2 - geographical coordinates in WGS84 degrees
     #
     def filter_stations(self, stationID, state, lat1, lat2, lon1, lon2):
@@ -214,26 +215,8 @@ class FMDB(object):
         if stationID is None:
             subset = stationDataFrame
         else:
-            #temp = stationDataFrame[stationDataFrame.site_number == 238]
-            #print(temp)
-            #print("")
             try:
-                #subset = stationDataFrame.iloc[stationID]
-                #print("here")
-                #print("")
-                #print(subset)
-                #print("")
-                #print("a1")
-                #print(stationDataFrame.columns)
-                #print(stationDataFrame.site)
-                #print(stationDataFrame.site[238])
-                #print(stationDataFrame.site[239])
-                #print(stationDataFrame.type)
-                #print("")
                 subset = stationDataFrame[stationDataFrame.site.index == stationID]
-                #subset2 = subset2.iloc[stationID]
-                #print(subset2)
-                #print("done")
             except:
                 subset = stationDataFrame
         if not len(subset):
@@ -325,39 +308,78 @@ class FMDB(object):
         else:
             return None
 
+    # Basic line plot for each site/fuelType/fuelVariation
+    #
+    # @ param dataFrame - pandas dataframe with the data to plot from get_data
+    # @ param outliers - boolean to include or not the outliers (points outside of [0,400] range)
+    #
+    def plot_lines(self,dataFrame,outliers=False):
+        if dataFrame is None:
+            dataFrame = self.get_data()
+        if not outliers:
+            dataFrame = filter_outliers(dataFrame)
+        fmplt.plot_lines(dataFrame)
+
+    # Standard deviation plot for each fuelType/fuelVariation (averaging all sites)
+    #
+    # @ param dataFrame - pandas dataframe with the data to plot from get_data function in the FMDB.py script
+    # @ param outliers - boolean to include or not the outliers (points outside of [0,400] range)
+    #
+    def plot_lines_mean(self,dataFrame,outliers=False):
+        if dataFrame is None:
+            dataFrame = self.get_data()
+        if not outliers:
+            dataFrame = filter_outliers(dataFrame)
+        fmplt.plot_lines_mean(dataFrame)
+        
+    # Bar plot that shows mean and standard devaition values for all the data each year unless monthly paramter is set to True.
+    #
+    # @ param dataFrame - pandas dataframe with the data to plot from get_data function in the FMDB.py script
+    # @ param monthly - boolean to change from yearly to monthly bars
+    # @ param outliers - boolean to include or not the outliers (points outside of [0,400] range)
+    #
+    def plot_bars_mean(self,dataFrame,monthly=False,outliers=False):
+        if dataFrame is None:
+            dataFrame = self.get_data()
+        if not outliers:
+            dataFrame = filter_outliers(dataFrame)
+        fmplt.plot_bars_mean(dataFrame,monthly)
+
+    # Bar plot that shows the number of observations over each year found in the dataFrame
+    #
+    # @ param dataFrame - pandas dataframe with the data to plot from get_data
+    # @ param outliers - boolean to include or not the outliers (points outside of [0,400] range)
+    #
+    def plot_yearly_obs(self,dataFrame=None,outliers=False):
+        if dataFrame is None:
+            dataFrame = self.get_data()
+        if not outliers:
+            dataFrame = filter_outliers(dataFrame)
+        fmplt.plot_yearly_obs(dataFrame)
+        
+    # Bar plot that shows the fuel types and number of observations of each fuel type found in the dataFrame
+    #
+    # @ param dataFrame - pandas dataframe with the data to plot from get_data
+    # @ param outliers - boolean to include or not the outliers (points outside of [0,400] range)
+    #
+    def plot_fuel_types(self,dataFrame,outliers=False):
+        if dataFrame is None:
+            dataFrame = self.get_data()
+        if not outliers:
+            dataFrame = filter_outliers(dataFrame)
+        fmplt.plot_fuel_types(dataFrame)
+
 if __name__ == '__main__':
     import time
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    fmdb = FMDB()
+    if len(sys.argv) == 1:
+        fmdb = FMDB()
+    elif len(sys.argv) == 2:
+        fmdb = FMDB(sys.argv[1])
+    else:
+        print('Usage: {} [path_to_FMDB]'.format(sys.argv[0])) 
+        sys.exit(1)
     st = time.time()
-    #fmdb.update_all()
-    siteNames = fmdb.sites()
-    fmdb.params['startYear'] = 2000
-    fmdb.params['endYear'] = 2022
-    fmdb.params['stationID'] = 255
-    fmdb.params['fuelType'] = 'Chamise'
-    fmdb.params['fuelVariation'] = 'New Growth'
-    fmdb.params['makeFile'] = False
-    fmdb.params['state'] = "CA"
-    allFMDB = fmdb.get_data()
-    #fmdb.update_state_stations("CA")
-    #fmdb.update_data()
-    #plot_yearly_obs(allFMDB)
-    #plot_biweekly_avg_max(allFMDB,siteNames.site[allFMDB.site_number.unique()[0]])
-    #plot_biweekly_avg_std(allFMDB,siteNames.site[allFMDB.site_number.unique()[0]])
-    #plot_monthly_avg_percentile(allFMDB,siteNames.site[allFMDB.site_number.unique()[0]])
-    plot_biweekly_percentile(allFMDB,siteNames.site[allFMDB.site_number.unique()[0]])
-    #plot_lines_mean(allFMDB)
-    #plot_lines(allFMDB)
-    #plot_bars_mean(allFMDB)
-    #plot_violin(allFMDB,siteNames,fmdb.params["stationID"])
-    #plot_fisk(allFMDB,siteNames,fmdb.params["stationID"])
-    
-    #plt.boxplot(allFMDB.percent)
-    #plt.violinplot(allFMDB.percent,
-    #               showmeans=True,
-    #               showmedians=False)
-    
-    #fuel_types(allFMDB)
+    fmdb.update_all()
     et = time.time()
     logging.info('Elapsed time: {}s'.format(et-st))

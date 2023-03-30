@@ -1,4 +1,4 @@
-# Fuel Mositure Content Database
+# Fuel Mositure Repository
 
 The goal of this project is to be able to neatly organize [the NFMD data](http://www.wfas.net/nfmd/public/index.php) into a local database and be able to query and plot easily the exact data requiered by the user from the database.
 
@@ -28,16 +28,16 @@ Python 3 and package modules
 
 * Import database class doing:
 ```python
-from FMDB import FMDB
+from FMR import FMR
 ```
-* Create an FMDB object doing:
+* Create an FMR object doing:
 ```python
-db = FMDB()
+db = FMR()
 ```
 
-Note: If anything specified, the default is going to be a folder called `FMDB` in the current path tree. One can specify a path where the DB should be created. For instance:
+Note: If anything specified, the default is going to be a folder called `FMR` in the current path tree. One can specify a path where the DB should be created. For instance:
 ```python
-db = FMDB('FMDB_CA')
+db = FMR('FMR_CA')
 ```
 
 ### Create/Update the list of stations to consider (from State or GACC)
@@ -127,7 +127,7 @@ db.params['makeFile'] = True       # This will save the data you get into a CSV 
 ```
 Once you have the parameters you want, you can call the get_data function.
 ```python
-allFMDB = db.get_data()
+allFMR = db.get_data()
 ```
  If you have the makeFile parameter as True and just want a CSV file with the data:
 ```python
@@ -139,7 +139,7 @@ There are a couple different plots you can create. All the plots have the flag o
 
 Basic line plot for each site/fuelType/fuelVariation
 ```python
-db.plot_lines(allFMDB)
+db.plot_lines(allFMR)
 ```
 By default the plot_lines function will automatically call the get_data function if not dataframe is provided
 in the argument.
@@ -151,7 +151,7 @@ Standard deviation plot for each fuelType/fuelVariation.
 Mean line is plotted for each month along with its standard deviation for each fuelType/fuelVariation.
 i.e. lines you will have : [Chamise - Old Growth, Chamise - New Growth, Chamise - None].
 ```python
-db.plot_lines_mean(allFMDB)
+db.plot_lines_mean(allFMR)
 ```
 By default the plot_lines_mean function will automatically call the get_data function if not dataframe is provided
 in the argument.
@@ -162,9 +162,9 @@ db.plot_lines_mean()
 Bar plot that shows mean and standard deviation values for all the data each year unless monthly parameter 
 is set to True.
 ```python
-db.plot_bars_mean(allFMDB, monthly=False)
-db.plot_bars_mean(allFMDB, monthly=True)
-db.plot_bars_mean(allFMDB, True)
+db.plot_bars_mean(allFMR, monthly=False)
+db.plot_bars_mean(allFMR, monthly=True)
+db.plot_bars_mean(allFMR, True)
 ```
 By default the plot_bars_mean function will automatically call the get_data function if not dataframe is provided
 in the argument.

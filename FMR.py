@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Feb  3 10:11:53 2021
-
-@author: jackr
-"""
 import datetime
 import io
 import logging
@@ -23,16 +17,16 @@ except:
 
 pd.set_option('display.max_colwidth', None)
 
-class FMDBError(Exception):
+class FMRError(Exception):
     pass
 
-class FMDB(object):
+class FMR(object):
     
-    # Constructor for FMDB class
+    # Constructor for Fuel Moisture Repository (FMR) class
     #
     # @ Param folder_path - path where this script is located
     #
-    def __init__(self, folder_path=osp.join(osp.abspath(os.getcwd()),"FMDB")):
+    def __init__(self, folder_path=osp.join(osp.abspath(os.getcwd()),"FMR")):
         self.folder_path = folder_path
         self.exists_here()
         self.stations_path = osp.join(self.folder_path,"stationID.pkl")
@@ -41,17 +35,17 @@ class FMDB(object):
         if osp.exists(self.last_update_path):
             self.last_updated = open(self.last_update_path).read()
             self.updated_dt = datetime.datetime.strptime(self.last_updated,'%Y-%m-%d %H:%M:%S')
-            logging.info('FMDB - Last updated at {}'.format(self.last_updated))
+            logging.info('FMR - Last updated at {}'.format(self.last_updated))
         else:
             self.last_updated = ''
             self.updated_dt = None
         self.init_params()
     
-    # Checks if FMDB directory exists. If not, it is created
+    # Checks if FMR directory exists. If not, it is created
     #    
     def exists_here(self):
         if osp.exists(self.folder_path):
-            logging.info("FMDB - Existent DB path {}".format(self.folder_path))
+            logging.info("FMR - Existent DB path {}".format(self.folder_path))
         else:
             os.makedirs(self.folder_path)
     
@@ -148,7 +142,7 @@ class FMDB(object):
             self.update_gacc_stations(gacc=gacc)
         self.update_data(startYear=1800)
 
-    # Creates/updates the datafiles in the FMDB folder
+    # Creates/updates the datafiles in the FMR folder
     #
     # @ Param startYear - start year you would like data for
     # @ Param endYear - end year you would like data for
@@ -325,7 +319,7 @@ class FMDB(object):
 
     # Standard deviation plot for each fuelType/fuelVariation (averaging all sites)
     #
-    # @ param dataFrame - pandas dataframe with the data to plot from get_data function in the FMDB.py script
+    # @ param dataFrame - pandas dataframe with the data to plot from get_data function in the FMR.py script
     # @ param outliers - boolean to include or not the outliers (points outside of [0,400] range)
     #
     def plot_lines_mean(self,dataFrame,outliers=False):
@@ -337,7 +331,7 @@ class FMDB(object):
         
     # Bar plot that shows mean and standard devaition values for all the data each year unless monthly paramter is set to True.
     #
-    # @ param dataFrame - pandas dataframe with the data to plot from get_data function in the FMDB.py script
+    # @ param dataFrame - pandas dataframe with the data to plot from get_data function in the FMR.py script
     # @ param monthly - boolean to change from yearly to monthly bars
     # @ param outliers - boolean to include or not the outliers (points outside of [0,400] range)
     #
@@ -376,11 +370,11 @@ if __name__ == '__main__':
     import time
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     if len(sys.argv) == 1:
-        fmdb = FMDB()
+        fmdb = FMR()
     elif len(sys.argv) == 2:
-        fmdb = FMDB(sys.argv[1])
+        fmdb = FMR(sys.argv[1])
     else:
-        print('Usage: {} [path_to_FMDB]'.format(sys.argv[0])) 
+        print('Usage: {} [path_to_FMR]'.format(sys.argv[0])) 
         sys.exit(1)
     st = time.time()
     fmdb.update_all()

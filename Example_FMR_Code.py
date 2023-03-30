@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 # Leaving the code as it is,it will run and run through all the basic functions.
 # Alternate code is marked with a double hashtag (##) and can be uncommented to
 # test. 
@@ -8,22 +6,22 @@
 
 
 # Libraries that need to be imported
-from FMDB import FMDB
+from FMR import FMR
 
 
 
 # Create database object
 #
-# If you do not specify a folder name in the FMDB() arguments,
-# a folder named FMDB will be automoatically created. All database
+# If you do not specify a folder name in the FMR() arguments,
+# a folder named FMR will be automoatically created. All database
 # components will be stored here (i.e. stationID list, database storage,
 # data files[csv])
 #
-db = FMDB()
+db = FMR()
 #
-# To specify your own folder name, just call it in the argument FMDB("fileName").
+# To specify your own folder name, just call it in the argument FMR("fileName").
 #
-## db = FMDB('CA_FMDB')
+## db = FMR('CA_FMR')
 
 
 
@@ -113,7 +111,7 @@ db.params['fuelType'] = 'Chamise'
 #
 # Once you have the parameters you want, you can call the get_data function.
 #
-allFMDB = db.get_data()
+allFMR = db.get_data()
 #
 # If you have the makeFile paramter as true and just want the csv:
 #
@@ -127,20 +125,20 @@ allFMDB = db.get_data()
 #
 # Basic line plot for each site/fuelType/fuelVariation
 #
-## db.plot_lines(allFMDB)
+## db.plot_lines(allFMR)
 #
 # Standard deviation plot for each fuelType/fuelVariation. 
 # Mean line is plotted for each month along with its standard deviation for each fuelType/fuelVariation.
 # i.e. lines you will have : [Chamise - Old Growth, Chamise - New Growth, Chamise - None].
 #
-db.plot_lines_mean(allFMDB)
+db.plot_lines_mean(allFMR)
 #
 # Bar plot that shows mean and standard devaition values for all the data each year unless monthly paramter 
 # is set to True.
 #
-## plot_bars_mean(allFMDB, monthly=False)
-## plot_bars_mean(allFMDB, monthly=True)
-## plot_bars_mean(allFMDB, True)
+## plot_bars_mean(allFMR, monthly=False)
+## plot_bars_mean(allFMR, monthly=True)
+## plot_bars_mean(allFMR, True)
 
 
 

@@ -1,12 +1,10 @@
 
 # Import Necessary Functions
-import datetime as dt
 from dateutil.relativedelta import *
 import logging
 import pandas as pd
 import matplotlib.dates as md
 import matplotlib.pyplot as plt
-import numpy as np
 from utils import *
 
 
@@ -14,7 +12,7 @@ from utils import *
 
 # Basic line plot for each site/fuelType/fuelVariation
 #
-# @ param dataFrame - pandas dataframe with the data to plot from get_data function in the FMDB.py script
+# @ param dataFrame - pandas dataframe with the data to plot from get_data function in the FMR.py script
 #
 def plot_lines(dataFrame):
     # Quit plotting if no data is available
@@ -54,7 +52,7 @@ def plot_lines(dataFrame):
         
 # Standard deviation plot for each fuelType/fuelVariation (averaging all sites)
 #
-# @ param dataFrame - pandas dataframe with the data to plot from get_data function in the FMDB.py script
+# @ param dataFrame - pandas dataframe with the data to plot from get_data function in the FMR.py script
 #
 def plot_lines_mean(dataFrame):
     # Quit plotting if no data is available
@@ -98,7 +96,7 @@ def plot_lines_mean(dataFrame):
 
 # Bar plot that shows mean and standard devaition values for all the data each year unless monthly paramter is set to True.
 #
-# @ param dataFrame - pandas dataframe with the data to plot from get_data function in the FMDB.py script
+# @ param dataFrame - pandas dataframe with the data to plot from get_data function in the FMR.py script
 # @ param monthly - boolean to change from yearly to monthly bars
 #
 def plot_bars_mean(dataFrame, monthly=False):
@@ -139,7 +137,7 @@ def plot_bars_mean(dataFrame, monthly=False):
 
 # Bar plot that shows the number of observations over the time period found in the dataFrame
 #
-# @param dataFrame - pandas dataframe with the data to plot from get_data function in the FMDB.py script
+# @param dataFrame - pandas dataframe with the data to plot from get_data function in the FMR.py script
 #
 def plot_yearly_obs(dataFrame):
     # Quit plotting if no data is available
@@ -166,7 +164,7 @@ def plot_yearly_obs(dataFrame):
 
 # Bar plot that shows the fuel types and number of observations of each fuel type found in the dataFrame
 #
-# @param dataFrame - pandas dataframe with the data to plot from get_data function in the FMDB.py script
+# @param dataFrame - pandas dataframe with the data to plot from get_data function in the FMR.py script
 #
 def plot_fuel_types(dataFrame):
     # Quit plotting if no data is available
@@ -190,9 +188,9 @@ def plot_fuel_types(dataFrame):
     plt.yticks(fontsize=15)
     ax.set_xlabel("Vegetation Types",fontsize=20)
     ax.set_ylabel("Number of Observations",fontsize=20)
-    #for label in ax.yaxis.get_majorticklabels():
-    #    label.set_fontsize(15)
-    #for label in ax.xaxis.get_majorticklabels():
-    #    label.set_fontsize(15)  
+    for label in ax.yaxis.get_majorticklabels():
+        label.set_fontsize(15)
+    for label in ax.xaxis.get_majorticklabels():
+        label.set_fontsize(15)  
     plt.title(f"Fuel Type Sampling Observations from {min(dataFrame.date.dt.year.unique())} - {max(dataFrame.date.dt.year.unique())}",fontsize=25)
     plt.show()

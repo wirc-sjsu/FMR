@@ -8,8 +8,6 @@ import datetime
 import io
 import logging
 from lxml import etree
-import matplotlib.dates as md
-import matplotlib.pyplot as plt
 import numpy as np
 import os.path as osp
 import os
@@ -66,6 +64,7 @@ class FMDB(object):
                     'makeFile': False}
     
     # Build site_number to refer to sites in the data
+    # @ Param df - DataFrame with stations' information
     #   
     def build_stations(self, df):
         if osp.exists(self.stations_path):
@@ -251,7 +250,6 @@ class FMDB(object):
         longitude1 = self.params.get('longitude1')
         longitude2 = self.params.get('longitude2')
         state = self.params.get('state')
-        #print(state)
         makeFile = self.params.get('makeFile', False)
         
         lat1,lat2,lon1,lon2 = check_coords(latitude1, latitude2, longitude1, longitude2)

@@ -10,9 +10,11 @@ import plotting as fmplt
 import sys
 try:
     from .utils import _GACCS
+    from .utils import _STATES
     from .utils import *
 except:
     from utils import _GACCS
+    from utils import _STATES
     from utils import *
 
 pd.set_option('display.max_colwidth', None)
@@ -138,8 +140,8 @@ class FMR(object):
     # Creates/updates all NFMDB database (stations and data)
     #
     def update_all(self):
-        for gacc in _GACCS:
-            self.update_gacc_stations(gacc=gacc)
+        for state in _STATES:
+            self.update_state_stations(state=state)
         self.update_data(startYear=1800)
 
     # Creates/updates the datafiles in the FMR folder
@@ -166,7 +168,7 @@ class FMR(object):
                     try:
                         df = pd.read_csv(io.StringIO(page.content.decode()),sep="\t")
                     except:
-                        logging.warning('url {} has not data'.format(url))
+                        logging.warning('url {} has no data'.format(url))
                         continue
                     df.columns = [c.lower() for c in df.columns]
                     df = df[["date", "state", "fuel", "percent"]]

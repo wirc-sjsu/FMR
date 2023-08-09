@@ -2,16 +2,22 @@ import requests
 import logging
 import numpy as np
 
-# Base URLs from NFMDB website
+# Base URLs from NFMD website
 BASE_URLS = {
     'gacc_sites': "https://www.wfas.net/nfmd/ajax/gacc_map_site_xml.php?gacc={}",
     'state_sites': "https://www.wfas.net/nfmd/ajax/states_map_site_xml.php?state={}",
     'site_data': "https://www.wfas.net/nfmd/public/download_site_data.php?site={}&gacc={}&state={}&grup={}"
 }
 
-# All available GACCs in NFMDB website
+# All available GACCs in NFMD website
 _GACCS = ['AICC', 'EACC', 'EGBC', 'NICC', 'NOCC', 'NRCC', 'NRCC', 
         'NWCC', 'RMCC', 'SACC', 'SOCC', 'SWCC', 'WGBC']
+
+# All available States in the NFMD website
+_STATES = [
+    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME',
+    'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA',
+    'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY']
 
 # Construct GACCs URL
 #
@@ -49,9 +55,9 @@ def getURL(url, max_retries=10):
             if page.ok:
                 return page
             else:
-                logging.warning('NFMDB is returning status {}'.format(page.status_code))
+                logging.warning('NFMD is returning status {}'.format(page.status_code))
         except Exception as e:
-            logging.error('NFMDB is not responding')
+            logging.error('NFMD is not responding')
         max_retries -= 1
         logging.warning('Reconnecting, {} retries'.format(max_retries))
 
